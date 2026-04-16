@@ -1,0 +1,590 @@
+import React, { useMemo, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { 
+  Trophy, 
+  TrendingUp, 
+  Target, 
+  Shield, 
+  Zap, 
+  Users,
+  BarChart3,
+  Activity,
+  Award,
+  Download,
+  Loader2,
+  Sparkles,
+  Copy,
+  Eye
+} from 'lucide-react';
+import { StatGraphicModal } from '@/components/dashboard/StatGraphicModal';
+import { useStore, Team, Fixture, Player } from '@/store/useStore';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toPng } from 'html-to-image';
+import { toast } from 'sonner';
+import { ai } from '@/lib/gemini';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+export function StatsDashboard() {
+  const { teams, fixtures, players } = useStore();
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [generatingPostId, setGeneratingPostId] = useState<string | null>(null);
+  const [generatedPost, setGeneratedPost] = useState<string | null>(null);
+  const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
+  const [graphicData, setGraphicData] = useState<{ type: any, data: any } | null>(null);
+
+  const handleGeneratePost = async (sectionId: string, dataContext: any) => {
+    try {
+      setGeneratingPostId(sectionId);
+      
+      const prompt = `You are a hype-man social media manager for an eFootball tournament called "KickOff Pro Series".
+      Write an engaging, exciting, and colorful social media post (Twitter/X style) based on the following stats data.
+      Use emojis, hashtags, and a hyped tone. Keep it under 280 characters if possible, but make it punchy.
+      
+      Data Context:
+      ${JSON.stringify(dataContext, null, 2)}
+      `;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      });
+
+      setGeneratedPost(response.text || 'Failed to generate post.');
+      setIsPostDialogOpen(true);
+    } catch (error) {
+      console.error('Error generating post:', error);
+      toast.error('Failed to generate AI post.');
+    } finally {
+      setGeneratingPostId(null);
+    }
+  };
+
+  const copyPostToClipboard = () => {
+    if (generatedPost) {
+      navigator.clipboard.writeText(generatedPost);
+      toast.success('Post copied to clipboard!');
+    }
+  };
+
+  const handleExport = async (elementId: string, filename: string) => {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    try {
+      setExportingId(elementId);
+      const dataUrl = await toPng(element, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+      });
+
+      const link = document.createElement('a');
+      link.download = `${filename}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success('Graphic exported successfully!');
+    } catch (error) {
+      console.error('Export Error:', error);
+      toast.error('Failed to export graphic');
+    } finally {
+      setExportingId(null);
+    }
+  };
+
+  const teamStats = useMemo(() => {
+    return teams.map(team => {
+      let goals = 0;
+      let passes = 0;
+      let saves = 0;
+      let possessionTotal = 0;
+      let possessionCount = 0;
+      let shots = 0;
+      let shotsOnTarget = 0;
+      let fouls = 0;
+      let corners = 0;
+      let freeKicks = 0;
+      let successfulPasses = 0;
+      let crosses = 0;
+      let interceptions = 0;
+      let tackles = 0;
+
+      fixtures.forEach(f => {
+        if (f.status === 'finished') {
+          if (f.homeTeamId === team.id) {
+            goals += f.homeScore || 0;
+            passes += f.stats?.passes_home || 0;
+            saves += f.stats?.saves_home || 0;
+            shots += f.stats?.shots_home || 0;
+            shotsOnTarget += f.stats?.shots_on_target_home || 0;
+            fouls += f.stats?.fouls_home || 0;
+            corners += f.stats?.corners_home || 0;
+            freeKicks += f.stats?.free_kicks_home || 0;
+            successfulPasses += f.stats?.successful_passes_home || 0;
+            crosses += f.stats?.crosses_home || 0;
+            interceptions += f.stats?.interceptions_home || 0;
+            tackles += f.stats?.tackles_home || 0;
+            if (f.stats?.possession_home) {
+              possessionTotal += f.stats.possession_home;
+              possessionCount++;
+            }
+          } else if (f.awayTeamId === team.id) {
+            goals += f.awayScore || 0;
+            passes += f.stats?.passes_away || 0;
+            saves += f.stats?.saves_away || 0;
+            shots += f.stats?.shots_away || 0;
+            shotsOnTarget += f.stats?.shots_on_target_away || 0;
+            fouls += f.stats?.fouls_away || 0;
+            corners += f.stats?.corners_away || 0;
+            freeKicks += f.stats?.free_kicks_away || 0;
+            successfulPasses += f.stats?.successful_passes_away || 0;
+            crosses += f.stats?.crosses_away || 0;
+            interceptions += f.stats?.interceptions_away || 0;
+            tackles += f.stats?.tackles_away || 0;
+            if (f.stats?.possession_away) {
+              possessionTotal += f.stats.possession_away;
+              possessionCount++;
+            }
+          }
+        }
+      });
+
+      return {
+        ...team,
+        totalGoals: goals,
+        totalPasses: passes,
+        totalSaves: saves,
+        totalShots: shots,
+        totalShotsOnTarget: shotsOnTarget,
+        totalFouls: fouls,
+        totalCorners: corners,
+        totalFreeKicks: freeKicks,
+        totalSuccessfulPasses: successfulPasses,
+        totalCrosses: crosses,
+        totalInterceptions: interceptions,
+        totalTackles: tackles,
+        avgPossession: possessionCount > 0 ? Math.round(possessionTotal / possessionCount) : 0,
+      };
+    });
+  }, [teams, fixtures]);
+
+  const topScorers = useMemo(() => {
+    return [...teamStats]
+      .sort((a, b) => b.totalGoals - a.totalGoals)
+      .slice(0, 10);
+  }, [teamStats]);
+
+  const teamForm = useMemo(() => {
+    return teams.map(team => {
+      const teamFixtures = fixtures
+        .filter(f => f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id))
+        .sort((a, b) => b.round - a.round)
+        .slice(0, 5);
+
+      const form = teamFixtures.map(f => {
+        const isHome = f.homeTeamId === team.id;
+        const score = isHome ? f.homeScore! : f.awayScore!;
+        const oppScore = isHome ? f.awayScore! : f.homeScore!;
+        
+        if (score > oppScore) return 'W';
+        if (score < oppScore) return 'L';
+        return 'D';
+      }).reverse();
+
+      return { ...team, form };
+    });
+  }, [teams, fixtures]);
+
+  const tournamentStats = useMemo(() => {
+    const finishedFixtures = fixtures.filter(f => f.status === 'finished');
+    
+    let highestScore = { value: 0, team: '', match: '' };
+    let totalYellowCards = players.reduce((sum, p) => sum + p.yellowCards, 0);
+    let totalRedCards = players.reduce((sum, p) => sum + p.redCards, 0);
+
+    finishedFixtures.forEach(f => {
+      if (f.homeScore! > highestScore.value) {
+        highestScore = { 
+          value: f.homeScore!, 
+          team: teams.find(t => t.id === f.homeTeamId)?.handleName || teams.find(t => t.id === f.homeTeamId)?.name || '',
+          match: `${teams.find(t => t.id === f.homeTeamId)?.name} vs ${teams.find(t => t.id === f.awayTeamId)?.name}`
+        };
+      }
+      if (f.awayScore! > highestScore.value) {
+        highestScore = { 
+          value: f.awayScore!, 
+          team: teams.find(t => t.id === f.awayTeamId)?.handleName || teams.find(t => t.id === f.awayTeamId)?.name || '',
+          match: `${teams.find(t => t.id === f.homeTeamId)?.name} vs ${teams.find(t => t.id === f.awayTeamId)?.name}`
+        };
+      }
+    });
+
+    const mostPassesTeam = [...teamStats].sort((a, b) => b.totalPasses - a.totalPasses)[0];
+    const mostSavesTeam = [...teamStats].sort((a, b) => b.totalSaves - a.totalSaves)[0];
+
+    const mostPasses = {
+      value: mostPassesTeam?.totalPasses || 0,
+      team: mostPassesTeam?.handleName || mostPassesTeam?.name || 'N/A'
+    };
+
+    const mostSaves = {
+      value: mostSavesTeam?.totalSaves || 0,
+      team: mostSavesTeam?.handleName || mostSavesTeam?.name || 'N/A'
+    };
+
+    return { mostPasses, mostSaves, highestScore, totalYellowCards, totalRedCards };
+  }, [fixtures, teams, players, teamStats]);
+
+  return (
+    <div className="space-y-8 pb-12">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Tournament Stats</h2>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
+          Season Records
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Top Scorers */}
+        <div className="lg:col-span-2 space-y-6">
+          <div id="golden-boot-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  < Award className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Golden Boot Race</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleGeneratePost('golden-boot-section', { title: 'Golden Boot Race', topScorers: topScorers.map(t => ({ team: t.name, goals: t.totalGoals })) })}
+                  disabled={generatingPostId === 'golden-boot-section'}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                >
+                  {generatingPostId === 'golden-boot-section' ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
+                  AI Post
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const data = topScorers.map(t => ({ id: t.id, name: t.name, goals: t.totalGoals, teamName: t.name }));
+                    setGraphicData({ type: 'golden-boot', data });
+                  }}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                >
+                  <Eye className="w-3 h-3 mr-2" />
+                  View Graphic
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {topScorers.length > 0 ? topScorers.map((team, i) => (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  key={team.id}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-lg transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className={cn(
+                      "text-lg font-black italic w-6",
+                      i === 0 ? "text-primary" : "text-slate-300"
+                    )}>{i + 1}</span>
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 p-1.5">
+                      <img 
+                        src={team.logo} 
+                        className="w-full h-full object-contain" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900 uppercase tracking-tight">{team.handleName || team.name}</p>
+                      {team.handleName && (
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          {team.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-black text-primary italic leading-none">{team.totalGoals}</p>
+                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Goals</p>
+                  </div>
+                </motion.div>
+              )) : (
+                <div className="text-center py-12 text-slate-300">
+                  <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p className="text-sm font-black uppercase tracking-widest">No goals recorded yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Team Form & Records */}
+        <div className="space-y-8">
+          {/* Team Form */}
+          <div id="power-rankings-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Power Rankings</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleGeneratePost('power-rankings-section', { title: 'Power Rankings', rankings: teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ team: t.name, form: t.form.join('') })) })}
+                  disabled={generatingPostId === 'power-rankings-section'}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                >
+                  {generatingPostId === 'power-rankings-section' ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
+                  AI Post
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const data = teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ name: t.name, pts: t.pts }));
+                    setGraphicData({ type: 'power-rankings', data });
+                  }}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                >
+                  <Eye className="w-3 h-3 mr-2" />
+                  View Graphic
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map((team, i) => (
+                <div key={team.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={team.logo} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+                    <span className="text-xs font-black text-slate-700 uppercase tracking-tight truncate max-w-[100px]">{team.name}</span>
+                  </div>
+                  <div className="flex gap-1">
+                    {team.form.map((res, idx) => (
+                      <div 
+                        key={idx}
+                        className={cn(
+                          "w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-black text-white",
+                          res === 'W' ? "bg-green-500" : res === 'L' ? "bg-red-500" : "bg-slate-400"
+                        )}
+                      >
+                        {res}
+                      </div>
+                    ))}
+                    {team.form.length === 0 && <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No games</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tournament Records */}
+          <div id="season-highs-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Season Highs</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleGeneratePost('season-highs-section', { title: 'Season Highs', stats: tournamentStats })}
+                  disabled={generatingPostId === 'season-highs-section'}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                >
+                  {generatingPostId === 'season-highs-section' ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
+                  AI Post
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const data = [
+                      { title: 'Most Passes', teams: [{ name: tournamentStats.mostPasses.team, value: tournamentStats.mostPasses.value }] },
+                      { title: 'Most Saves', teams: [{ name: tournamentStats.mostSaves.team, value: tournamentStats.mostSaves.value }] }
+                    ];
+                    setGraphicData({ type: 'team-stats', data });
+                  }}
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                >
+                  <Eye className="w-3 h-3 mr-2" />
+                  View Graphic
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Most Passes (Total)</span>
+                  <span className="text-primary">{tournamentStats.mostPasses.value}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <p className="text-xs font-black text-slate-700 uppercase">{tournamentStats.mostPasses.team}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Most Saves (Total)</span>
+                  <span className="text-primary">{tournamentStats.mostSaves.value}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <p className="text-xs font-black text-slate-700 uppercase">{tournamentStats.mostSaves.team}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>Highest Score (Team)</span>
+                  <span className="text-primary">{tournamentStats.highestScore.value}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                  <p className="text-xs font-black text-slate-700 uppercase">{tournamentStats.highestScore.team}</p>
+                  <p className="text-[8px] font-bold text-slate-400 uppercase">{tournamentStats.highestScore.match}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-yellow-50 border border-yellow-100">
+                  <p className="text-[8px] font-black text-yellow-600 uppercase tracking-widest mb-1">Yellow Cards</p>
+                  <p className="text-2xl font-black text-yellow-700 italic">{tournamentStats.totalYellowCards}</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
+                  <p className="text-[8px] font-black text-red-600 uppercase tracking-widest mb-1">Red Cards</p>
+                  <p className="text-2xl font-black text-red-700 italic">{tournamentStats.totalRedCards}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <div id="team-stats-leaderboard" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white lg:col-span-3 mt-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Target className="w-6 h-6 text-primary" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Team Stats Leaderboard</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => handleGeneratePost('team-stats-leaderboard', { title: 'Team Stats Leaderboard', stats: teamStats.map(t => ({ team: t.name, possession: t.avgPossession, shots: t.totalShots, passes: t.totalPasses, tackles: t.totalTackles })) })}
+              disabled={generatingPostId === 'team-stats-leaderboard'}
+              className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+            >
+              {generatingPostId === 'team-stats-leaderboard' ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
+              AI Post
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                const data = teamStats.map(t => ({ name: t.name, possession: t.avgPossession, shots: t.totalShots, passes: t.totalPasses, tackles: t.totalTackles }));
+                setGraphicData({ type: 'team-stats', data: [{ title: 'Possession', teams: teamStats.map(t => ({ name: t.name, value: t.avgPossession })) }] });
+              }}
+              className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+            >
+              <Eye className="w-3 h-3 mr-2" />
+              View Graphic
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { title: 'Avg Possession', key: 'avgPossession', suffix: '%' },
+            { title: 'Total Shots', key: 'totalShots' },
+            { title: 'Shots on Target', key: 'totalShotsOnTarget' },
+            { title: 'Total Passes', key: 'totalPasses' },
+            { title: 'Successful Passes', key: 'totalSuccessfulPasses' },
+            { title: 'Total Tackles', key: 'totalTackles' },
+            { title: 'Interceptions', key: 'totalInterceptions' },
+            { title: 'Total Saves', key: 'totalSaves' },
+          ].map((stat) => {
+            const topTeams = [...teamStats]
+              .sort((a, b) => (b[stat.key as keyof typeof b] as number) - (a[stat.key as keyof typeof a] as number))
+              .slice(0, 3);
+
+            return (
+              <div key={stat.title} className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2">{stat.title}</h4>
+                <div className="space-y-2">
+                  {topTeams.map((team, idx) => (
+                    <div key={team.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-xs font-black italic w-3", idx === 0 ? "text-primary" : "text-slate-300")}>{idx + 1}</span>
+                        <img src={team.logo} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                        <span className="text-xs font-bold text-slate-700 uppercase truncate max-w-[80px]">{team.handleName || team.name}</span>
+                      </div>
+                      <span className="text-sm font-black text-slate-900">{team[stat.key as keyof typeof team]}{stat.suffix || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      </div>
+      
+      <StatGraphicModal 
+        isOpen={!!graphicData} 
+        onClose={() => setGraphicData(null)} 
+        type={graphicData?.type} 
+        data={graphicData?.data} 
+      />
+      
+      <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              AI Generated Post
+            </DialogTitle>
+            <DialogDescription>
+              Copy this post to share your tournament stats on social media!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mt-4 relative">
+            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{generatedPost}</p>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-2 right-2 text-slate-400 hover:text-primary"
+              onClick={copyPostToClipboard}
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setIsPostDialogOpen(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
