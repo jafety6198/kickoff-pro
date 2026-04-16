@@ -26,6 +26,7 @@ import { MatchScanner } from '../scanner/MatchScanner';
 import { PosterGenerator } from '../graphics/PosterGenerator';
 import { MatchManagementModal } from './MatchManagementModal';
 import { SquadManagementModal } from './SquadManagementModal';
+import { TeamManagementModal } from './TeamManagementModal';
 import { StatsDashboard } from './StatsDashboard';
 import { Badge } from '@/components/ui/badge';
 
@@ -35,15 +36,19 @@ interface FixtureCardProps {
   teams: Team[];
   role: Role;
   updateFixtureScore: (fixtureId: string, homeScore: number, awayScore: number) => void;
+  onTeamClick?: (team: Team) => void;
 }
 
-function FixtureCard({ fixture, teams, role, updateFixtureScore }: FixtureCardProps) {
+function FixtureCard({ fixture, teams, role, updateFixtureScore, onTeamClick }: FixtureCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
   const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent expanding/modal if a team link was clicked
+    if ((e.target as HTMLElement).closest('.team-link')) return;
+
     if (role === 'admin') {
       setIsModalOpen(true);
     } else {
@@ -51,14 +56,21 @@ function FixtureCard({ fixture, teams, role, updateFixtureScore }: FixtureCardPr
     }
   };
 
+  const isFinished = fixture.status === 'finished';
+
   return (
     <>
       <motion.div 
         layout
         onClick={handleClick}
         className={cn(
-          "relative overflow-hidden bg-white border border-slate-200 rounded-2xl cursor-pointer group transition-all duration-500",
-          role === 'admin' ? "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10" : "hover:border-slate-400 hover:shadow-xl"
+          "relative overflow-hidden bg-white border rounded-2xl cursor-pointer group transition-all duration-500",
+          isFinished 
+            ? "border-green-500 shadow-lg shadow-green-500/10" 
+            : "border-slate-200",
+          role === 'admin' 
+            ? "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10" 
+            : "hover:border-slate-400 hover:shadow-xl"
         )}
       >
         {/* Decorative Background Element */}
@@ -68,7 +80,17 @@ function FixtureCard({ fixture, teams, role, updateFixtureScore }: FixtureCardPr
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             {/* Home Team */}
             <div className="flex flex-col items-center sm:items-end gap-3 flex-1 w-full sm:w-auto">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 p-2.5 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
+              <div 
+                onClick={(e) => {
+                  if (role === 'admin' && homeTeam) {
+                    onTeamClick?.(homeTeam);
+                  }
+                }}
+                className={cn(
+                  "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 p-2.5 border border-slate-100 shadow-inner transition-transform duration-500",
+                  role === 'admin' ? "team-link cursor-pointer hover:scale-110 hover:border-primary/30" : "group-hover:scale-110"
+                )}
+              >
                 <img 
                   src={homeTeam?.logo} 
                   className="w-full h-full object-contain" 
@@ -78,7 +100,16 @@ function FixtureCard({ fixture, teams, role, updateFixtureScore }: FixtureCardPr
               </div>
               <div className="text-center sm:text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Home</p>
-                <h4 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-tight italic leading-tight">
+                <h4 className={cn(
+                  "font-black text-sm sm:text-base uppercase tracking-tight italic leading-tight transition-colors",
+                  role === 'admin' ? "team-link cursor-pointer hover:text-primary" : "text-slate-900"
+                )}
+                onClick={(e) => {
+                  if (role === 'admin' && homeTeam) {
+                    onTeamClick?.(homeTeam);
+                  }
+                }}
+                >
                   {homeTeam?.name}
                 </h4>
               </div>
@@ -126,7 +157,17 @@ function FixtureCard({ fixture, teams, role, updateFixtureScore }: FixtureCardPr
 
             {/* Away Team */}
             <div className="flex flex-col items-center sm:items-start gap-3 flex-1 w-full sm:w-auto">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 p-2.5 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform duration-500">
+              <div 
+                onClick={(e) => {
+                  if (role === 'admin' && awayTeam) {
+                    onTeamClick?.(awayTeam);
+                  }
+                }}
+                className={cn(
+                  "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 p-2.5 border border-slate-100 shadow-inner transition-transform duration-500",
+                  role === 'admin' ? "team-link cursor-pointer hover:scale-110 hover:border-primary/30" : "group-hover:scale-110"
+                )}
+              >
                 <img 
                   src={awayTeam?.logo} 
                   className="w-full h-full object-contain" 
@@ -136,7 +177,16 @@ function FixtureCard({ fixture, teams, role, updateFixtureScore }: FixtureCardPr
               </div>
               <div className="text-center sm:text-left">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Away</p>
-                <h4 className="font-black text-sm sm:text-base text-slate-900 uppercase tracking-tight italic leading-tight">
+                <h4 className={cn(
+                  "font-black text-sm sm:text-base uppercase tracking-tight italic leading-tight transition-colors",
+                  role === 'admin' ? "team-link cursor-pointer hover:text-primary" : "text-slate-900"
+                )}
+                onClick={(e) => {
+                  if (role === 'admin' && awayTeam) {
+                    onTeamClick?.(awayTeam);
+                  }
+                }}
+                >
                   {awayTeam?.name}
                 </h4>
               </div>
@@ -249,6 +299,7 @@ export function Dashboard() {
   const { teams, fixtures, updateFixtureScore, role, resetTournament, setStep, setRole, nextSeason, currentProfileId } = useStore();
   const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'squads' | 'stats' | 'scanner' | 'graphics'>('standings');
   const [selectedTeamForSquad, setSelectedTeamForSquad] = useState<Team | null>(null);
+  const [selectedTeamForProfile, setSelectedTeamForProfile] = useState<Team | null>(null);
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
   
   const isSeasonFinished = useMemo(() => {
@@ -483,9 +534,19 @@ export function Dashboard() {
                         <tr key={team.id} className="group hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4 font-bold text-slate-900">{i + 1}</td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
+                            <div 
+                              className={cn(
+                                "flex items-center gap-3",
+                                role === 'admin' && "cursor-pointer hover:text-primary transition-colors"
+                              )}
+                              onClick={() => {
+                                if (role === 'admin') {
+                                  setSelectedTeamForProfile(team);
+                                }
+                              }}
+                            >
                               <img src={team.logo} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
-                              <span className="text-sm font-semibold text-slate-900">{team.name}</span>
+                              <span className="text-sm font-semibold">{team.name}</span>
                             </div>
                           </td>
                           <td className="px-4 py-4 text-center text-sm text-slate-600">{team.played}</td>
@@ -570,6 +631,7 @@ export function Dashboard() {
                             teams={teams}
                             role={role}
                             updateFixtureScore={updateFixtureScore}
+                            onTeamClick={setSelectedTeamForProfile}
                           />
                         ))}
                       </div>
@@ -681,6 +743,14 @@ export function Dashboard() {
         relegated={standings.slice(-3)}
         onNextSeason={handleNextSeason}
       />
+      
+      {selectedTeamForProfile && (
+        <TeamManagementModal 
+          team={standings.find(t => t.id === selectedTeamForProfile.id) || selectedTeamForProfile}
+          isOpen={!!selectedTeamForProfile}
+          onClose={() => setSelectedTeamForProfile(null)}
+        />
+      )}
     </div>
   );
 }

@@ -22,6 +22,7 @@ export interface Team {
   formation?: string;
   collectiveStrength?: number;
   playstyle?: string;
+  description?: string;
 }
 
 export interface Player {
