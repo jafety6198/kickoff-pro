@@ -45,16 +45,20 @@ export function StatsDashboard() {
       setGeneratingPostId(sectionId);
       
       const prompt = `You are a hype-man social media manager for an eFootball tournament called "${tournamentName}".
-      Write a fired-up, engaging, and highly colorful social media post (Twitter/X style) specifically about "${dataContext.title}".
-      Use data points like: ${JSON.stringify(dataContext, null, 2)}.
+      Your goal is to write an absolute banger of a social media post (Twitter/X style) that is high-energy, infectious, and packed with personality.
       
-      Instructions:
-      - Use football slang (e.g., "Baller", "Scenes", "Worldie").
-      - Use plenty of emojis.
-      - Keep it under 280 characters for X/Twitter.
-      - Make sure to tag the top performer mentioned in the data.
-      - End with trending hashtags like #eFootball #TournamentStats #KickOffPro.
-      `;
+      Section: ${dataContext.title}
+      Context: ${JSON.stringify(dataContext, null, 2)}
+      
+      STRICT GUIDELINES:
+      - Start with a massive hook (e.g., "SCENES!", "UNREAL!", "THE KINGS ARE HERE!").
+      - Use football-specific hype slang: "Baller", "Clear", "Cooking", "Elite", "Masterclass", "Cold".
+      - Shout out the specific top-performing team or player mentioned in the data.
+      - Use exactly 4-6 appropriate emojis.
+      - Total length must be under 240 characters.
+      - End with: #eFootball #${tournamentName.replace(/\s+/g, '')} #KickOffPro
+      
+      Write the post now:`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
@@ -179,11 +183,12 @@ export function StatsDashboard() {
     });
   }, [teams, fixtures]);
 
-  const topScorers = useMemo(() => {
-    return [...players]
-      .sort((a, b) => b.goals - a.goals)
+  const teamScorerRace = useMemo(() => {
+    return [...teamStats]
+      .filter(t => t.totalGoals > 0)
+      .sort((a, b) => b.totalGoals - a.totalGoals)
       .slice(0, 10);
-  }, [players]);
+  }, [teamStats]);
 
   const teamForm = useMemo(() => {
     return teams.map(team => {
@@ -261,16 +266,19 @@ export function StatsDashboard() {
           <div id="golden-boot-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  < Award className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                   < Award className="w-6 h-6 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Golden Boot Race</h3>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Golden Boot Race (Team)</h3>
               </div>
               <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handleGeneratePost('golden-boot-section', { title: 'Golden Boot Race', topScorers: topScorers.map(p => ({ player: p.name, team: teams.find(t => t.id === p.teamId)?.name, goals: p.goals })) })}
+                  onClick={() => handleGeneratePost('golden-boot-section', { 
+                    title: 'Golden Boot (Team Rankings)', 
+                    topTeams: teamScorerRace.map(t => ({ team: t.name, goals: t.totalGoals })) 
+                  })}
                   disabled={generatingPostId === 'golden-boot-section'}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
                 >
@@ -281,11 +289,11 @@ export function StatsDashboard() {
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    const data = topScorers.map(p => ({ 
-                      id: p.id, 
-                      name: p.name, 
-                      goals: p.goals, 
-                      teamName: teams.find(t => t.id === p.teamId)?.name || 'Unknown' 
+                    const data = teamScorerRace.map(t => ({ 
+                      id: t.id, 
+                      name: t.name, 
+                      goals: t.totalGoals, 
+                      teamName: 'Total Team Goals' 
                     }));
                     setGraphicData({ type: 'golden-boot', data });
                   }}
@@ -298,37 +306,36 @@ export function StatsDashboard() {
             </div>
 
             <div className="space-y-3">
-              {topScorers.length > 0 ? topScorers.map((player, i) => {
-                const team = teams.find(t => t.id === player.teamId);
+              {teamScorerRace.length > 0 ? teamScorerRace.map((team, i) => {
                 return (
                   <motion.div 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    key={player.id}
+                    key={team.id}
                     className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-lg transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <span className={cn(
                         "text-lg font-black italic w-6",
-                        i === 0 ? "text-primary" : "text-slate-300"
+                        i === 0 ? "text-amber-500" : "text-slate-300"
                       )}>{i + 1}</span>
-                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 p-1.5">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 p-1.5 shadow-sm">
                         <img 
-                          src={team?.logo || ''} 
+                          src={team.logo} 
                           className="w-full h-full object-contain" 
                           referrerPolicy="no-referrer" 
                         />
                       </div>
                       <div>
-                        <p className="font-black text-slate-900 uppercase tracking-tight">{player.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          {team?.name || 'Unknown'}
-                        </p>
+                        <p className="font-black text-slate-900 uppercase tracking-tight">{team.name}</p>
+                        <Badge className="bg-amber-500/10 text-amber-600 border-none text-[8px] font-black uppercase tracking-widest">
+                          Goal Machines
+                        </Badge>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-black text-primary italic leading-none">{player.goals}</p>
+                      <p className="text-2xl font-black text-amber-500 italic leading-none">{team.totalGoals}</p>
                       <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Goals</p>
                     </div>
                   </motion.div>

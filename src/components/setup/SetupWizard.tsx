@@ -239,7 +239,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
                       </div>
                       
                       <div className="space-y-3">
-                        <Select onValueChange={(val: string) => handleEPLSelect(i, val)}>
+                        <Select value={p.name} onValueChange={(val: string) => handleEPLSelect(i, val)}>
                           <SelectTrigger className="bg-white border-none h-12 rounded-xl font-bold text-pl-purple">
                             <SelectValue placeholder="Select EPL Team" />
                           </SelectTrigger>

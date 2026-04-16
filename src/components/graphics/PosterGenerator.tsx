@@ -994,7 +994,7 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Select Match</label>
                 <Select 
                   onValueChange={(val) => setSelectedFixture(fixtures.find(f => f.id === val))}
-                  value={selectedFixture?.id}
+                  value={selectedFixture?.id || ""}
                 >
                   <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-slate-50/50 focus:ring-primary/20">
                     <SelectValue placeholder="Choose a match" />
