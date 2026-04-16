@@ -38,40 +38,89 @@ export function StatsDashboard() {
   const [generatingPostId, setGeneratingPostId] = useState<string | null>(null);
   const [generatedPost, setGeneratedPost] = useState<string | null>(null);
   const [isPostDialogOpen, setIsPostDialogOpen] = useState(false);
+  const [insightLoading, setInsightLoading] = useState(false);
   const [graphicData, setGraphicData] = useState<{ type: any, data: any } | null>(null);
 
   const handleGeneratePost = async (sectionId: string, dataContext: any) => {
+    if (!ai) {
+      toast.error('AI is not configured. Check your Gemini API key.');
+      return;
+    }
+
     try {
       setGeneratingPostId(sectionId);
       
-      const prompt = `You are a hype-man social media manager for an eFootball tournament called "${tournamentName}".
-      Your goal is to write an absolute banger of a social media post (Twitter/X style) that is high-energy, infectious, and packed with personality.
+      const prompt = `You are an elite, high-energy football social media manager for the "${tournamentName}" eFootball Series.
       
-      Section: ${dataContext.title}
+      TARGET DATA: 
+      Topic: ${dataContext.title}
       Context: ${JSON.stringify(dataContext, null, 2)}
       
-      STRICT GUIDELINES:
-      - Start with a massive hook (e.g., "SCENES!", "UNREAL!", "THE KINGS ARE HERE!").
-      - Use football-specific hype slang: "Baller", "Clear", "Cooking", "Elite", "Masterclass", "Cold".
-      - Shout out the specific top-performing team or player mentioned in the data.
-      - Use exactly 4-6 appropriate emojis.
-      - Total length must be under 240 characters.
-      - End with: #eFootball #${tournamentName.replace(/\s+/g, '')} #KickOffPro
+      POST REQUIREMENTS:
+      1. STYLE: Hype-man, aggressive energy, colorful, "scenes" type atmosphere.
+      2. HOOK: Start with an attention-grabbing header like "🚨 UNREAL SCENES" or "👑 ABSOLUTE KINGS".
+      3. SLANG: Mix in elite football slang: 'Baller', 'Clear', 'Cooking', 'Elite', 'Levels', 'Cold'.
+      4. CONTENT: Mention specific teams/players from the data. Use the numbers to prove the hype.
+      5. FORMAT: Under 240 characters. Perfect for X/Twitter.
+      6. EMOJIS: 4-6 high-impact emojis (🔥, 👑, ⚽, ⚡, 📈).
+      7. SIGNATURE: End with: #eFootball #${tournamentName.replace(/\s+/g, '')} #KickOffPro
       
-      Write the post now:`;
+      Generate the post now:`;
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: prompt,
+        config: {
+          temperature: 0.9,
+          topK: 64,
+          topP: 0.95
+        }
       });
 
-      setGeneratedPost(response.text || 'Failed to generate post. Please try again.');
+      const text = response.text;
+      if (!text) throw new Error('Empty response from AI');
+
+      setGeneratedPost(text.trim());
       setIsPostDialogOpen(true);
     } catch (error) {
-      console.error('Error generating post:', error);
-      toast.error('Failed to generate AI post.');
+      console.error('AI Generation Error:', error);
+      toast.error('AI generation unavailable. Please try again later.');
     } finally {
       setGeneratingPostId(null);
+    }
+  };
+
+  const handleTournamentInsight = async () => {
+    if (!ai) return;
+    try {
+      setInsightLoading(true);
+      const context = {
+        tournament: tournamentName,
+        teamStats: teamStats.slice(0, 5).map(t => ({ name: t.name, pts: t.pts, goals: t.totalGoals, form: t.form?.join('') })),
+        records: tournamentStats
+      };
+
+      const prompt = `Perform a deep strategy analysis of the "${tournamentName}" eFootball tournament based on these current standings and records: ${JSON.stringify(context)}.
+      
+      Provide:
+      1. A "Team to Watch" with a brief reason why they are dominant.
+      2. A "Tactical Trend" you notice (e.g., high scoring, defensive masterclasses).
+      3. A prediction for the next big matchup.
+      
+      Keep it professional yet engaging. Use bold headers.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt
+      });
+
+      setGeneratedPost(response.text || 'Insight generation failed.');
+      setIsPostDialogOpen(true);
+    } catch (error) {
+      console.error('Insight Error:', error);
+      toast.error('Failed to generate tournament insights.');
+    } finally {
+      setInsightLoading(false);
     }
   };
 
@@ -255,8 +304,18 @@ export function StatsDashboard() {
     <div className="space-y-8 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Tournament Stats</h2>
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
-          Season Records
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleTournamentInsight}
+            disabled={insightLoading}
+            className="rounded-full bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] px-6 h-10 hover:bg-slate-800 shadow-xl transition-all"
+          >
+            {insightLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2 text-primary" />}
+            AI Insights
+          </Button>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
+            Season Records
+          </div>
         </div>
       </div>
 
