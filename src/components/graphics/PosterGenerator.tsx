@@ -22,6 +22,7 @@ const templates = [
   { id: 'pl-matchday', name: 'PL Match Day', color: 'bg-pl-purple', accent: '#00FF85' },
   { id: 'pl-fixtures', name: 'PL Fixtures', color: 'bg-white', accent: '#3D195B' },
   { id: 'pl-standings', name: 'PL Standings', color: 'bg-white', accent: '#3D195B' },
+  { id: 'pl-full-table', name: 'PL Full Table', color: 'bg-white', accent: '#3D195B' },
   { id: 'pl-top-six', name: 'PL Top Six', color: 'bg-white', accent: '#00FF85' },
   { id: 'pl-stats', name: 'PL Match Stats', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'pl-squad', name: 'PL Squad', color: 'bg-[#3D195B]', accent: '#00FF85' },
@@ -48,8 +49,8 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         const padding = 80;
         const availableWidth = canvasRef.current.clientWidth - padding;
         const availableHeight = canvasRef.current.clientHeight - padding;
-        const targetWidth = 700;
-        const targetHeight = 850; // Max expected height for templates like top-six
+        const targetWidth = template.id === 'pl-full-table' ? 1400 : 700;
+        const targetHeight = 850; 
         
         const scaleW = availableWidth / targetWidth;
         const scaleH = availableHeight / targetHeight;
@@ -112,10 +113,11 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
 
     try {
       setGenerating(true);
+      const downloadWidth = template.id === 'pl-full-table' ? 2200 : 1400;
       const dataUrl = await toPng(posterRef.current, {
         quality: 1,
         pixelRatio: 2, // For high definition
-        width: 1400, // Increased for wider aspect ratio
+        width: downloadWidth,
         height: posterRef.current.offsetHeight * 2, // Dynamic height based on content
       });
 
@@ -412,25 +414,25 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                     </p>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {roundFixtures.map((f, i) => (
-                      <div key={i} className="flex items-center justify-center gap-5 py-1.5">
+                      <div key={i} className="flex items-center justify-center gap-6 py-3.5 border-b border-slate-100 last:border-0">
                         <div className="flex-1 text-right">
-                          <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_a?.name}</span>
+                          <span className="text-2xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_a?.name}</span>
                         </div>
-                        <div className="w-10 h-10 flex items-center justify-center">
-                          <img src={f.team_a?.logo_url} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+                        <div className="w-12 h-12 flex items-center justify-center">
+                          <img src={f.team_a?.logo_url} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
                         </div>
-                        <div className="bg-[#3D195B] text-white px-3 py-1 rounded-lg min-w-[90px] text-center">
-                          <span className="text-lg font-black italic">
+                        <div className="bg-[#3D195B] text-white px-4 py-1.5 rounded-xl min-w-[110px] text-center shadow-lg">
+                          <span className="text-xl font-black italic">
                             {f.status === 'finished' ? `${f.score_a} - ${f.score_b}` : '20:00'}
                           </span>
                         </div>
-                        <div className="w-10 h-10 flex items-center justify-center">
-                          <img src={f.team_b?.logo_url} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+                        <div className="w-12 h-12 flex items-center justify-center">
+                          <img src={f.team_b?.logo_url} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
                         </div>
                         <div className="flex-1 text-left">
-                          <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_b?.name}</span>
+                          <span className="text-2xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_b?.name}</span>
                         </div>
                       </div>
                     ))}
@@ -543,32 +545,32 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
             </div>
 
             <div className="relative z-10 w-full h-auto flex flex-col ml-16">
-              <div className="flex items-center justify-between mb-5 px-4">
-                <div className="flex gap-12 text-[9px] font-black text-[#3D195B]/40 uppercase tracking-widest">
-                  <span className="w-7">Pos</span>
-                  <span className="flex-1">Club</span>
+              <div className="flex items-center justify-between mb-6 px-6">
+                <div className="flex items-center gap-8 text-[11px] font-black text-[#3D195B]/40 uppercase tracking-[0.2em]">
+                  <span className="w-10 text-center">Pos</span>
+                  <span className="ml-10">Club</span>
                 </div>
-                <div className="flex gap-8 text-[9px] font-black text-[#3D195B]/40 uppercase tracking-widest">
-                  <span className="w-7 text-center">P</span>
-                  <span className="w-7 text-center">GD</span>
-                  <span className="w-7 text-center">Pts</span>
+                <div className="flex gap-12 text-[11px] font-black text-[#3D195B]/40 uppercase tracking-[0.2em]">
+                  <span className="w-10 text-center">P</span>
+                  <span className="w-10 text-center">GD</span>
+                  <span className="w-10 text-center">Pts</span>
                 </div>
               </div>
 
-              <div className="flex-1 space-y-1 overflow-hidden">
+              <div className="flex-1 space-y-0">
                 {standings.map((team, i) => (
-                  <div key={team.id} className="flex items-center justify-between px-4 py-1.5 border-b border-slate-100 group hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-5">
-                      <span className="w-7 text-xl font-black text-[#3D195B] italic">{i + 1}</span>
-                      <div className="w-7 h-7 flex items-center justify-center">
-                        <img src={team.logo} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
+                  <div key={team.id} className="flex items-center justify-between px-6 py-4 border-b border-slate-100/50 group hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-8">
+                      <span className="w-10 text-2xl font-black text-[#3D195B] italic text-center drop-shadow-sm">{i + 1}</span>
+                      <div className="w-10 h-10 flex items-center justify-center">
+                        <img src={team.logo} className="w-7 h-7 object-contain" referrerPolicy="no-referrer" />
                       </div>
-                      <span className="text-lg font-black text-[#3D195B] uppercase tracking-tighter">{team.name}</span>
+                      <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter">{team.name}</span>
                     </div>
-                    <div className="flex gap-8">
-                      <span className="w-7 text-center text-lg font-black text-[#3D195B]">{team.played}</span>
-                      <span className="w-7 text-center text-lg font-black text-[#3D195B]">{team.gd}</span>
-                      <span className="w-7 text-center text-lg font-black text-[#3D195B]">{team.pts}</span>
+                    <div className="flex gap-12 font-black">
+                      <span className="w-10 text-center text-xl text-[#3D195B] tabular-nums">{team.played}</span>
+                      <span className="w-10 text-center text-xl text-[#3D195B] tabular-nums">{team.gd > 0 ? `+${team.gd}` : team.gd}</span>
+                      <span className="w-10 text-center text-xl text-[#3D195B] tabular-nums text-primary">{team.pts}</span>
                     </div>
                   </div>
                 ))}
@@ -576,6 +578,94 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
 
               <div className="mt-6 text-[8px] font-bold text-slate-400 italic">
                 *Generated by {tournamentName} Standings Engine
+              </div>
+            </div>
+          </div>
+        );
+      case 'pl-full-table':
+        return (
+          <div className="w-full h-auto min-h-full bg-white flex flex-col items-center p-10 relative overflow-hidden">
+            {/* PL Side Bar */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-b from-[#3D195B] via-[#00FF85] to-[#3D195B]" />
+            <div className="absolute left-12 top-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[-90deg]">
+               <h2 className="text-7xl font-black text-white uppercase tracking-tighter whitespace-nowrap opacity-40">SEASON TABLE</h2>
+            </div>
+            <div className="absolute left-12 top-10 -translate-x-1/2">
+               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-14 h-14 brightness-0 invert" alt="PL" />
+            </div>
+            <div className="absolute left-12 bottom-10 -translate-x-1/2 text-center">
+               <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">SEASON</p>
+               <p className="text-white text-3xl font-black leading-none">24/25</p>
+            </div>
+
+            <div className="relative z-10 w-full h-auto flex flex-col pl-40 pr-16 text-slate-900">
+              <div className="flex items-center mb-8 px-8 bg-[#3D195B] py-5 rounded-2xl shadow-xl">
+                <div className="grid grid-cols-[60px_80px_1fr_60px_60px_60px_60px_60px_60px_70px_70px_200px] w-full items-center text-[11px] font-black text-white uppercase tracking-[0.2em]">
+                  <span className="text-center">#</span>
+                  <span className="pl-4">Club</span>
+                  <span></span>
+                  <span className="text-center">P</span>
+                  <span className="text-center">W</span>
+                  <span className="text-center">D</span>
+                  <span className="text-center">L</span>
+                  <span className="text-center text-white/50">GF</span>
+                  <span className="text-center text-white/50">GA</span>
+                  <span className="text-center text-[#00FF85]">GD</span>
+                  <span className="text-center text-[#00FF85]">Pts</span>
+                  <span className="text-center">Form</span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 px-2">
+                {standings.map((team, i) => (
+                  <div key={team.id} className="flex items-center px-6 py-4 border-b border-slate-100 group transition-all hover:bg-slate-50 rounded-xl">
+                    <div className="grid grid-cols-[60px_80px_1fr_60px_60px_60px_60px_60px_60px_70px_70px_200px] w-full items-center">
+                      <span className="text-3xl font-black text-[#3D195B] italic text-center leading-none tabular-nums opacity-80">{i + 1}</span>
+                      <div className="flex justify-center">
+                        <img src={team.logo} className="w-12 h-12 object-contain filter drop-shadow-md" referrerPolicy="no-referrer" />
+                      </div>
+                      <span className="text-2xl font-black text-[#3D195B] uppercase tracking-tighter truncate pr-8">{team.name}</span>
+                      
+                      <span className="text-center font-bold text-[#3D195B] text-xl tabular-nums">{team.played}</span>
+                      <span className="text-center font-bold text-[#3D195B] text-xl tabular-nums">{team.won}</span>
+                      <span className="text-center font-bold text-[#3D195B] text-xl tabular-nums">{team.drawn}</span>
+                      <span className="text-center font-bold text-[#3D195B] text-xl tabular-nums">{team.lost}</span>
+                      <span className="text-center font-bold text-slate-400 text-lg tabular-nums text-opacity-40">{team.gf}</span>
+                      <span className="text-center font-bold text-slate-400 text-lg tabular-nums text-opacity-40">{team.ga}</span>
+                      <span className="text-center font-black text-[#3D195B] text-xl tabular-nums">{team.gd > 0 ? `+${team.gd}` : team.gd}</span>
+                      <span className="text-center font-black text-primary text-3xl tabular-nums drop-shadow-sm">{team.pts}</span>
+                      
+                      <div className="flex justify-center gap-2.5 items-center">
+                        {team.form?.map((result, idx) => (
+                          <div 
+                            key={idx}
+                            className={cn(
+                              "w-8 h-8 rounded-md flex items-center justify-center text-sm font-black text-white shadow-md transition-transform hover:scale-110",
+                              result === 'W' ? "bg-[#00FF85] text-[#3D195B]" : result === 'L' ? "bg-[#FF005A]" : "bg-slate-300"
+                            )}
+                          >
+                            {result}
+                          </div>
+                        )) || '-'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex items-center justify-between">
+                <div className="text-[9px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-sm bg-green-500" /> <span>WIN</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-sm bg-slate-400" /> <span>DRAW</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-sm bg-red-500" /> <span>LOSS</span>
+                  </div>
+                </div>
+                <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-8 h-8 opacity-10" alt="PL" />
               </div>
             </div>
           </div>
@@ -1019,7 +1109,10 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
             <div className="relative shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] rounded-[40px] overflow-hidden bg-white">
               <div 
                 ref={posterRef}
-                className="w-[700px] h-auto min-h-[540px] relative overflow-hidden"
+                className={cn(
+                  "h-auto min-h-[540px] relative overflow-hidden",
+                  template.id === 'pl-full-table' ? "w-[1400px]" : "w-[700px]"
+                )}
               >
                 {renderTemplate()}
                 

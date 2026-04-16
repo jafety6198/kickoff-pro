@@ -56,12 +56,19 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
       gf: 0,
       ga: 0,
       gd: 0,
-      pts: 0
+      pts: 0,
+      form: []
     });
   });
   
+  // Sort fixtures by round and ID to ensure predictable order
+  const sortedFixtures = [...fixtures].sort((a, b) => {
+    if (a.round !== b.round) return a.round - b.round;
+    return a.id.localeCompare(b.id);
+  });
+
   // Process finished fixtures
-  fixtures.filter(f => f.status === 'finished').forEach(f => {
+  sortedFixtures.filter(f => f.status === 'finished').forEach(f => {
     const home = standingsMap.get(f.homeTeamId);
     const away = standingsMap.get(f.awayTeamId);
     
@@ -76,20 +83,33 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
       if (f.homeScore > f.awayScore) {
         home.won += 1;
         home.pts += 3;
+        home.form?.push('W');
         away.lost += 1;
+        away.form?.push('L');
       } else if (f.homeScore < f.awayScore) {
         away.won += 1;
         away.pts += 3;
+        away.form?.push('W');
         home.lost += 1;
+        home.form?.push('L');
       } else {
         home.drawn += 1;
         away.drawn += 1;
         home.pts += 1;
+        home.form?.push('D');
         away.pts += 1;
+        away.form?.push('D');
       }
       
       home.gd = home.gf - home.ga;
       away.gd = away.gf - away.ga;
+    }
+  });
+
+  // Keep only the last 5 results for form
+  standingsMap.forEach(team => {
+    if (team.form) {
+      team.form = team.form.slice(-5);
     }
   });
   

@@ -44,12 +44,16 @@ export function StatsDashboard() {
     try {
       setGeneratingPostId(sectionId);
       
-      const prompt = `You are a hype-man social media manager for an eFootball tournament called "KickOff Pro Series".
-      Write an engaging, exciting, and colorful social media post (Twitter/X style) based on the following stats data.
-      Use emojis, hashtags, and a hyped tone. Keep it under 280 characters if possible, but make it punchy.
+      const prompt = `You are a hype-man social media manager for an eFootball tournament called "${tournamentName}".
+      Write a fired-up, engaging, and highly colorful social media post (Twitter/X style) specifically about "${dataContext.title}".
+      Use data points like: ${JSON.stringify(dataContext, null, 2)}.
       
-      Data Context:
-      ${JSON.stringify(dataContext, null, 2)}
+      Instructions:
+      - Use football slang (e.g., "Baller", "Scenes", "Worldie").
+      - Use plenty of emojis.
+      - Keep it under 280 characters for X/Twitter.
+      - Make sure to tag the top performer mentioned in the data.
+      - End with trending hashtags like #eFootball #TournamentStats #KickOffPro.
       `;
 
       const response = await ai.models.generateContent({
@@ -57,7 +61,7 @@ export function StatsDashboard() {
         contents: prompt,
       });
 
-      setGeneratedPost(response.text || 'Failed to generate post.');
+      setGeneratedPost(response.text || 'Failed to generate post. Please try again.');
       setIsPostDialogOpen(true);
     } catch (error) {
       console.error('Error generating post:', error);
@@ -176,10 +180,10 @@ export function StatsDashboard() {
   }, [teams, fixtures]);
 
   const topScorers = useMemo(() => {
-    return [...teamStats]
-      .sort((a, b) => b.totalGoals - a.totalGoals)
+    return [...players]
+      .sort((a, b) => b.goals - a.goals)
       .slice(0, 10);
-  }, [teamStats]);
+  }, [players]);
 
   const teamForm = useMemo(() => {
     return teams.map(team => {
@@ -266,7 +270,7 @@ export function StatsDashboard() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handleGeneratePost('golden-boot-section', { title: 'Golden Boot Race', topScorers: topScorers.map(t => ({ team: t.name, goals: t.totalGoals })) })}
+                  onClick={() => handleGeneratePost('golden-boot-section', { title: 'Golden Boot Race', topScorers: topScorers.map(p => ({ player: p.name, team: teams.find(t => t.id === p.teamId)?.name, goals: p.goals })) })}
                   disabled={generatingPostId === 'golden-boot-section'}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
                 >
@@ -277,7 +281,12 @@ export function StatsDashboard() {
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    const data = topScorers.map(t => ({ id: t.id, name: t.name, goals: t.totalGoals, teamName: t.name }));
+                    const data = topScorers.map(p => ({ 
+                      id: p.id, 
+                      name: p.name, 
+                      goals: p.goals, 
+                      teamName: teams.find(t => t.id === p.teamId)?.name || 'Unknown' 
+                    }));
                     setGraphicData({ type: 'golden-boot', data });
                   }}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
@@ -289,41 +298,42 @@ export function StatsDashboard() {
             </div>
 
             <div className="space-y-3">
-              {topScorers.length > 0 ? topScorers.map((team, i) => (
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  key={team.id}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className={cn(
-                      "text-lg font-black italic w-6",
-                      i === 0 ? "text-primary" : "text-slate-300"
-                    )}>{i + 1}</span>
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 p-1.5">
-                      <img 
-                        src={team.logo} 
-                        className="w-full h-full object-contain" 
-                        referrerPolicy="no-referrer" 
-                      />
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-900 uppercase tracking-tight">{team.handleName || team.name}</p>
-                      {team.handleName && (
+              {topScorers.length > 0 ? topScorers.map((player, i) => {
+                const team = teams.find(t => t.id === player.teamId);
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    key={player.id}
+                    className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-lg transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className={cn(
+                        "text-lg font-black italic w-6",
+                        i === 0 ? "text-primary" : "text-slate-300"
+                      )}>{i + 1}</span>
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 p-1.5">
+                        <img 
+                          src={team?.logo || ''} 
+                          className="w-full h-full object-contain" 
+                          referrerPolicy="no-referrer" 
+                        />
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-900 uppercase tracking-tight">{player.name}</p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                          {team.name}
+                          {team?.name || 'Unknown'}
                         </p>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-black text-primary italic leading-none">{team.totalGoals}</p>
-                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Goals</p>
-                  </div>
-                </motion.div>
-              )) : (
+                    <div className="text-right">
+                      <p className="text-2xl font-black text-primary italic leading-none">{player.goals}</p>
+                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Goals</p>
+                    </div>
+                  </motion.div>
+                );
+              }) : (
                 <div className="text-center py-12 text-slate-300">
                   <TrendingUp className="w-12 h-12 mx-auto mb-4 opacity-20" />
                   <p className="text-sm font-black uppercase tracking-widest">No goals recorded yet</p>
@@ -397,11 +407,13 @@ export function StatsDashboard() {
           </div>
 
           {/* Tournament Records */}
-          <div id="season-highs-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
-            <div className="flex items-center justify-between">
+          <div id="season-highs-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+            
+            <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-orange-500" />
                 </div>
                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Season Highs</h3>
               </div>
@@ -409,7 +421,7 @@ export function StatsDashboard() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handleGeneratePost('season-highs-section', { title: 'Season Highs', stats: tournamentStats })}
+                  onClick={() => handleGeneratePost('season-highs-section', { title: 'Tournament Season Highs', stats: tournamentStats })}
                   disabled={generatingPostId === 'season-highs-section'}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
                 >
@@ -421,8 +433,9 @@ export function StatsDashboard() {
                   size="sm"
                   onClick={() => {
                     const data = [
-                      { title: 'Most Passes', teams: [{ name: tournamentStats.mostPasses.team, value: tournamentStats.mostPasses.value }] },
-                      { title: 'Most Saves', teams: [{ name: tournamentStats.mostSaves.team, value: tournamentStats.mostSaves.value }] }
+                      { title: 'Goal Machines', teams: [{ name: tournamentStats.highestScore.team, value: `${tournamentStats.highestScore.value} Goals` }] },
+                      { title: 'Best Passers', teams: [{ name: tournamentStats.mostPasses.team, value: `${tournamentStats.mostPasses.value} Passes` }] },
+                      { title: 'Top Keepers', teams: [{ name: tournamentStats.mostSaves.team, value: `${tournamentStats.mostSaves.value} Saves` }] }
                     ];
                     setGraphicData({ type: 'team-stats', data });
                   }}
@@ -434,46 +447,62 @@ export function StatsDashboard() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <span>Most Passes (Total)</span>
-                  <span className="text-primary">{tournamentStats.mostPasses.value}</span>
+            <div className="space-y-4 relative z-10">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Most Passes</p>
+                      <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[140px]">{tournamentStats.mostPasses.team}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black text-blue-500 tabular-nums">{tournamentStats.mostPasses.value}</p>
+                  </div>
                 </div>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-xs font-black text-slate-700 uppercase">{tournamentStats.mostPasses.team}</p>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <span>Most Saves (Total)</span>
-                  <span className="text-primary">{tournamentStats.mostSaves.value}</span>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Most Saves</p>
+                      <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[140px]">{tournamentStats.mostSaves.team}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black text-purple-500 tabular-nums">{tournamentStats.mostSaves.value}</p>
+                  </div>
                 </div>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-xs font-black text-slate-700 uppercase">{tournamentStats.mostSaves.team}</p>
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  <span>Highest Score (Team)</span>
-                  <span className="text-primary">{tournamentStats.highestScore.value}</span>
-                </div>
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-xs font-black text-slate-700 uppercase">{tournamentStats.highestScore.team}</p>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase">{tournamentStats.highestScore.match}</p>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Highest Match Score</p>
+                      <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[140px]">{tournamentStats.highestScore.team}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black text-emerald-500 tabular-nums">{tournamentStats.highestScore.value}</p>
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-yellow-50 border border-yellow-100">
-                  <p className="text-[8px] font-black text-yellow-600 uppercase tracking-widest mb-1">Yellow Cards</p>
-                  <p className="text-2xl font-black text-yellow-700 italic">{tournamentStats.totalYellowCards}</p>
+                <div className="p-4 rounded-2xl bg-yellow-50 border border-yellow-100 flex flex-col items-center text-center">
+                  <p className="text-[9px] font-black text-yellow-600 uppercase tracking-widest mb-1">Yellows</p>
+                  <p className="text-3xl font-black text-yellow-700 italic">{tournamentStats.totalYellowCards}</p>
                 </div>
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-100">
-                  <p className="text-[8px] font-black text-red-600 uppercase tracking-widest mb-1">Red Cards</p>
-                  <p className="text-2xl font-black text-red-700 italic">{tournamentStats.totalRedCards}</p>
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-100 flex flex-col items-center text-center">
+                  <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mb-1">Reds</p>
+                  <p className="text-3xl font-black text-red-700 italic">{tournamentStats.totalRedCards}</p>
                 </div>
               </div>
             </div>
@@ -502,8 +531,25 @@ export function StatsDashboard() {
               variant="outline" 
               size="sm"
               onClick={() => {
-                const data = teamStats.map(t => ({ name: t.name, possession: t.avgPossession, shots: t.totalShots, passes: t.totalPasses, tackles: t.totalTackles }));
-                setGraphicData({ type: 'team-stats', data: [{ title: 'Possession', teams: teamStats.map(t => ({ name: t.name, value: t.avgPossession })) }] });
+                const groups = [
+                  { 
+                    title: 'Avg Possession (%)', 
+                    teams: [...teamStats].sort((a, b) => b.avgPossession - a.avgPossession).slice(0, 5).map(t => ({ name: t.name, value: t.avgPossession })) 
+                  },
+                  { 
+                    title: 'Total Goals', 
+                    teams: [...teamStats].sort((a, b) => b.totalGoals - a.totalGoals).slice(0, 5).map(t => ({ name: t.name, value: t.totalGoals })) 
+                  },
+                  { 
+                    title: 'Total Shots', 
+                    teams: [...teamStats].sort((a, b) => b.totalShots - a.totalShots).slice(0, 5).map(t => ({ name: t.name, value: t.totalShots })) 
+                  },
+                  { 
+                    title: 'Clean Sheets (Saves)', 
+                    teams: [...teamStats].sort((a, b) => b.totalSaves - a.totalSaves).slice(0, 5).map(t => ({ name: t.name, value: t.totalSaves })) 
+                  }
+                ];
+                setGraphicData({ type: 'team-stats', data: groups });
               }}
               className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
             >

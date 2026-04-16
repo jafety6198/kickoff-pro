@@ -23,6 +23,7 @@ export interface Team {
   collectiveStrength?: number;
   playstyle?: string;
   description?: string;
+  form?: ('W' | 'D' | 'L')[];
 }
 
 export interface Player {
