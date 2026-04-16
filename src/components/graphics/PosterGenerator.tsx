@@ -49,7 +49,10 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         const padding = 80;
         const availableWidth = canvasRef.current.clientWidth - padding;
         const availableHeight = canvasRef.current.clientHeight - padding;
-        const targetWidth = template.id === 'pl-full-table' ? 1400 : 700;
+        const targetWidth = 
+          template.id === 'pl-full-table' ? 1400 : 
+          template.id === 'pl-fixtures' ? 1000 : 
+          template.id === 'pl-standings' ? 1000 : 700;
         const targetHeight = 850; 
         
         const scaleW = availableWidth / targetWidth;
@@ -113,7 +116,10 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
 
     try {
       setGenerating(true);
-      const downloadWidth = template.id === 'pl-full-table' ? 2200 : 1400;
+      const downloadWidth = 
+        template.id === 'pl-full-table' ? 2200 : 
+        template.id === 'pl-fixtures' ? 1800 : 
+        template.id === 'pl-standings' ? 1800 : 1400;
       const dataUrl = await toPng(posterRef.current, {
         quality: 1,
         pixelRatio: 2, // For high definition
@@ -396,43 +402,46 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         return (
           <div className="w-full h-auto min-h-full bg-white flex flex-col items-center p-12 relative overflow-hidden">
             {/* PL Side Bar */}
-            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-b from-[#00FF85] via-[#02EFFE] to-[#00FF85]" />
-            <div className="absolute left-12 top-1/2 -translate-y-1/2 -translate-x-1/2">
-               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-24 h-24" alt="PL" />
+            <div className="absolute left-0 top-0 bottom-0 w-44 bg-gradient-to-b from-[#00FF85] via-[#02EFFE] to-[#00FF85]" />
+            <div className="absolute left-22 top-1/2 -translate-y-1/2 -translate-x-1/2">
+               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-36 h-36" alt="PL" />
             </div>
 
-            <div className="relative z-10 w-full h-full flex flex-col ml-16">
-              <div className="mb-6">
-                <h1 className="text-6xl font-black text-[#3D195B] uppercase tracking-tighter">Matchweek {selectedRound}</h1>
+            <div className="relative z-10 w-full h-full flex flex-col pl-44 pr-12">
+              <div className="mb-8">
+                <h1 className="text-7xl font-black text-[#3D195B] uppercase tracking-tighter">Matchweek {selectedRound}</h1>
+                <div className="h-2 w-32 bg-[#3D195B] mt-2" />
               </div>
 
-              <div className="flex-1 space-y-4">
-                <div className="space-y-5">
-                  <div className="text-center">
-                    <p className="text-lg font-black text-[#3D195B] uppercase tracking-widest border-b-4 border-[#3D195B] inline-block pb-1">
-                      {tournamentName} Fixtures
+              <div className="flex-1">
+                <div className="space-y-6">
+                  <div className="text-center mb-10">
+                    <p className="text-xl font-black text-[#3D195B] uppercase tracking-[0.3em] border-b-4 border-[#3D195B] inline-block pb-2">
+                      Premier League S1 Fixtures
                     </p>
                   </div>
                   
                   <div className="space-y-4">
                     {roundFixtures.map((f, i) => (
-                      <div key={i} className="flex items-center justify-center gap-6 py-3.5 border-b border-slate-100 last:border-0">
-                        <div className="flex-1 text-right">
-                          <span className="text-2xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_a?.name}</span>
+                      <div key={i} className="grid grid-cols-[1fr_50px_130px_50px_1fr] items-center gap-6 py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                        <div className="text-right">
+                          <span className="text-2xl sm:text-3xl font-black text-[#3D195B] uppercase tracking-tighter leading-none">{f.team_a?.name}</span>
                         </div>
-                        <div className="w-12 h-12 flex items-center justify-center">
-                          <img src={f.team_a?.logo_url} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                        <div className="flex items-center justify-center">
+                          <img src={f.team_a?.logo_url} className="w-10 h-10 object-contain drop-shadow-sm" referrerPolicy="no-referrer" />
                         </div>
-                        <div className="bg-[#3D195B] text-white px-4 py-1.5 rounded-xl min-w-[110px] text-center shadow-lg">
-                          <span className="text-xl font-black italic">
-                            {f.status === 'finished' ? `${f.score_a} - ${f.score_b}` : '20:00'}
-                          </span>
+                        <div className="flex justify-center">
+                          <div className="bg-[#3D195B] text-white px-6 py-2 rounded-2xl min-w-[120px] text-center shadow-xl border-2 border-white/10">
+                            <span className="text-2xl font-black italic tracking-tighter">
+                              {f.status === 'finished' ? `${f.score_a} - ${f.score_b}` : '20:00'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="w-12 h-12 flex items-center justify-center">
-                          <img src={f.team_b?.logo_url} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                        <div className="flex items-center justify-center">
+                          <img src={f.team_b?.logo_url} className="w-10 h-10 object-contain drop-shadow-sm" referrerPolicy="no-referrer" />
                         </div>
-                        <div className="flex-1 text-left">
-                          <span className="text-2xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_b?.name}</span>
+                        <div className="text-left">
+                          <span className="text-2xl sm:text-3xl font-black text-[#3D195B] uppercase tracking-tighter leading-none">{f.team_b?.name}</span>
                         </div>
                       </div>
                     ))}
@@ -532,46 +541,40 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         return (
           <div className="w-full h-auto min-h-full bg-white flex flex-col items-center p-12 relative overflow-hidden">
             {/* PL Side Bar */}
-            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-b from-[#FF005A] via-[#3D195B] to-[#FF005A]" />
-            <div className="absolute left-12 top-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[-90deg]">
+            <div className="absolute left-0 top-0 bottom-0 w-44 bg-gradient-to-b from-[#FF005A] via-[#3D195B] to-[#FF005A]" />
+            <div className="absolute left-22 top-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[-90deg]">
                <h2 className="text-7xl font-black text-white uppercase tracking-tighter whitespace-nowrap opacity-40">THE RUN IN</h2>
             </div>
-            <div className="absolute left-12 top-12 -translate-x-1/2">
-               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-16 h-16 brightness-0 invert" alt="PL" />
+            <div className="absolute left-22 top-12 -translate-x-1/2">
+               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-24 h-24 brightness-0 invert" alt="PL" />
             </div>
-            <div className="absolute left-12 bottom-12 -translate-x-1/2 text-center">
+            <div className="absolute left-22 bottom-12 -translate-x-1/2 text-center">
                <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">MW</p>
                <p className="text-white text-4xl font-black leading-none">{selectedRound}</p>
             </div>
 
-            <div className="relative z-10 w-full h-auto flex flex-col ml-16">
-              <div className="flex items-center justify-between mb-6 px-6">
-                <div className="flex items-center gap-8 text-[11px] font-black text-[#3D195B]/40 uppercase tracking-[0.2em]">
-                  <span className="w-10 text-center">Pos</span>
-                  <span className="ml-10">Club</span>
-                </div>
-                <div className="flex gap-12 text-[11px] font-black text-[#3D195B]/40 uppercase tracking-[0.2em]">
-                  <span className="w-10 text-center">P</span>
-                  <span className="w-10 text-center">GD</span>
-                  <span className="w-10 text-center">Pts</span>
-                </div>
+            <div className="relative z-10 w-full h-auto flex flex-col pl-44 pr-12">
+              <div className="grid grid-cols-[60px_80px_1fr_100px_100px_100px] items-center mb-8 px-8 border-b-2 border-slate-100 pb-4 text-[12px] font-black text-[#3D195B]/60 uppercase tracking-[0.3em]">
+                <span className="text-center">Pos</span>
+                <span className="pl-4">Club</span>
+                <span />
+                <span className="text-center">P</span>
+                <span className="text-center">GD</span>
+                <span className="text-center">Pts</span>
               </div>
 
-              <div className="flex-1 space-y-0">
+              <div className="flex-1 space-y-1">
                 {standings.map((team, i) => (
-                  <div key={team.id} className="flex items-center justify-between px-6 py-4 border-b border-slate-100/50 group hover:bg-slate-50/50 transition-colors">
-                    <div className="flex items-center gap-8">
-                      <span className="w-10 text-2xl font-black text-[#3D195B] italic text-center drop-shadow-sm">{i + 1}</span>
-                      <div className="w-10 h-10 flex items-center justify-center">
-                        <img src={team.logo} className="w-7 h-7 object-contain" referrerPolicy="no-referrer" />
-                      </div>
-                      <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter">{team.name}</span>
+                  <div key={team.id} className="grid grid-cols-[60px_80px_1fr_100px_100px_100px] items-center px-8 py-4 border-b border-slate-50 group hover:bg-slate-50/50 transition-colors rounded-xl font-black">
+                    <span className="text-3xl text-[#3D195B] italic text-center drop-shadow-sm tabular-nums">{i + 1}</span>
+                    <div className="w-12 h-12 flex items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 p-1.5 mx-auto">
+                      <img src={team.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                     </div>
-                    <div className="flex gap-12 font-black">
-                      <span className="w-10 text-center text-xl text-[#3D195B] tabular-nums">{team.played}</span>
-                      <span className="w-10 text-center text-xl text-[#3D195B] tabular-nums">{team.gd > 0 ? `+${team.gd}` : team.gd}</span>
-                      <span className="w-10 text-center text-xl text-[#3D195B] tabular-nums text-primary">{team.pts}</span>
-                    </div>
+                    <span className="text-2xl text-[#3D195B] uppercase tracking-tighter truncate pr-4">{team.name}</span>
+                    
+                    <span className="text-center text-2xl text-[#3D195B] tabular-nums">{team.played}</span>
+                    <span className="text-center text-2xl text-[#3D195B] tabular-nums">{team.gd > 0 ? `+${team.gd}` : team.gd}</span>
+                    <span className="text-center text-3xl text-primary tabular-nums italic">{team.pts}</span>
                   </div>
                 ))}
               </div>
@@ -586,19 +589,19 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         return (
           <div className="w-full h-auto min-h-full bg-white flex flex-col items-center p-10 relative overflow-hidden">
             {/* PL Side Bar */}
-            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-b from-[#3D195B] via-[#00FF85] to-[#3D195B]" />
-            <div className="absolute left-12 top-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[-90deg]">
+            <div className="absolute left-0 top-0 bottom-0 w-44 bg-gradient-to-b from-[#3D195B] via-[#00FF85] to-[#3D195B]" />
+            <div className="absolute left-22 top-1/2 -translate-y-1/2 -translate-x-1/2 rotate-[-90deg]">
                <h2 className="text-7xl font-black text-white uppercase tracking-tighter whitespace-nowrap opacity-40">SEASON TABLE</h2>
             </div>
-            <div className="absolute left-12 top-10 -translate-x-1/2">
-               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-14 h-14 brightness-0 invert" alt="PL" />
+            <div className="absolute left-22 top-10 -translate-x-1/2">
+               <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-24 h-24 brightness-0 invert" alt="PL" />
             </div>
-            <div className="absolute left-12 bottom-10 -translate-x-1/2 text-center">
+            <div className="absolute left-22 bottom-10 -translate-x-1/2 text-center">
                <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">SEASON</p>
                <p className="text-white text-3xl font-black leading-none">24/25</p>
             </div>
 
-            <div className="relative z-10 w-full h-auto flex flex-col pl-40 pr-16 text-slate-900">
+            <div className="relative z-10 w-full h-auto flex flex-col pl-44 pr-16 text-slate-900">
               <div className="flex items-center mb-8 px-8 bg-[#3D195B] py-5 rounded-2xl shadow-xl">
                 <div className="grid grid-cols-[60px_80px_1fr_60px_60px_60px_60px_60px_60px_70px_70px_200px] w-full items-center text-[11px] font-black text-white uppercase tracking-[0.2em]">
                   <span className="text-center">#</span>
@@ -1111,7 +1114,9 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                 ref={posterRef}
                 className={cn(
                   "h-auto min-h-[540px] relative overflow-hidden",
-                  template.id === 'pl-full-table' ? "w-[1400px]" : "w-[700px]"
+                  template.id === 'pl-full-table' ? "w-[1400px]" : 
+                  template.id === 'pl-fixtures' ? "w-[1000px]" : 
+                  template.id === 'pl-standings' ? "w-[1000px]" : "w-[700px]"
                 )}
               >
                 {renderTemplate()}

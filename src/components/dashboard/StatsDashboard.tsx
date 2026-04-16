@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 
 export function StatsDashboard() {
-  const { teams, fixtures, players } = useStore();
+  const { teams, fixtures, players, tournamentName } = useStore();
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [generatingPostId, setGeneratingPostId] = useState<string | null>(null);
   const [generatedPost, setGeneratedPost] = useState<string | null>(null);

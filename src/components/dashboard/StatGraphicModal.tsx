@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Trophy, TrendingUp, AlertTriangle, Activity, Download, Camera } from 'lucide-react';
+import { X, Trophy, TrendingUp, AlertTriangle, Activity, Download, Camera, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStore } from '@/store/useStore';
 import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import { useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface StatGraphicModalProps {
   isOpen: boolean;
