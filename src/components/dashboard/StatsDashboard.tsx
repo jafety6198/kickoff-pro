@@ -68,7 +68,7 @@ export function StatsDashboard() {
       Generate the post now:`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-flash-latest',
         contents: prompt,
         config: {
           temperature: 0.9,
@@ -110,7 +110,7 @@ export function StatsDashboard() {
       Keep it professional yet engaging. Use bold headers.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-flash-latest',
         contents: prompt
       });
 
