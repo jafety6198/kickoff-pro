@@ -424,7 +424,17 @@ export function StatsDashboard() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handleGeneratePost('power-rankings-section', { title: 'Power Rankings', rankings: teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ team: t.name, form: t.form.join('') })) })}
+                  onClick={() => handleGeneratePost('power-rankings-section', { 
+                    title: 'Current Form Power Rankings', 
+                    topForm: teamForm
+                      .sort((a, b) => b.pts - a.pts)
+                      .slice(0, 3)
+                      .map(t => ({ 
+                        team: t.name, 
+                        recentForm: t.form.join(''),
+                        points: t.pts 
+                      })) 
+                  })}
                   disabled={generatingPostId === 'power-rankings-section'}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
                 >
@@ -515,7 +525,7 @@ export function StatsDashboard() {
 
             <div className="space-y-4 relative z-10">
               <div className="grid grid-cols-1 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all relative">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
                       <Zap className="w-4 h-4" />
@@ -525,12 +535,22 @@ export function StatsDashboard() {
                       <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[140px]">{tournamentStats.mostPasses.team}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-blue-500 tabular-nums">{tournamentStats.mostPasses.value}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xl font-black text-blue-500 tabular-nums">{tournamentStats.mostPasses.value}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-primary opacity-0 group-hover/item:opacity-100 transition-opacity"
+                      onClick={() => handleGeneratePost('most-passes', { title: 'Tournament Passing Record', team: tournamentStats.mostPasses.team, passes: tournamentStats.mostPasses.value })}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all relative">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500">
                       <Shield className="w-4 h-4" />
@@ -540,12 +560,22 @@ export function StatsDashboard() {
                       <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[140px]">{tournamentStats.mostSaves.team}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-purple-500 tabular-nums">{tournamentStats.mostSaves.value}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xl font-black text-purple-500 tabular-nums">{tournamentStats.mostSaves.value}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-primary opacity-0 group-hover/item:opacity-100 transition-opacity"
+                      onClick={() => handleGeneratePost('most-saves', { title: 'Tournament Saves Record', team: tournamentStats.mostSaves.team, saves: tournamentStats.mostSaves.value })}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between group/item hover:bg-white hover:shadow-md transition-all relative">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
                       <Target className="w-4 h-4" />
@@ -555,8 +585,18 @@ export function StatsDashboard() {
                       <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[140px]">{tournamentStats.highestScore.team}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black text-emerald-500 tabular-nums">{tournamentStats.highestScore.value}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-xl font-black text-emerald-500 tabular-nums">{tournamentStats.highestScore.value}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-400 hover:text-primary opacity-0 group-hover/item:opacity-100 transition-opacity"
+                      onClick={() => handleGeneratePost('highest-score', { title: 'Highest Season Score', team: tournamentStats.highestScore.team, score: tournamentStats.highestScore.value, match: tournamentStats.highestScore.match })}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -641,8 +681,21 @@ export function StatsDashboard() {
               .slice(0, 3);
 
             return (
-              <div key={stat.title} className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2">{stat.title}</h4>
+              <div key={stat.title} className="space-y-3 p-4 rounded-2xl bg-slate-50 border border-slate-100 group/stat">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.title}</h4>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-slate-300 hover:text-primary opacity-0 group-hover/stat:opacity-100 transition-opacity"
+                    onClick={() => handleGeneratePost(`stat-${stat.key}`, { 
+                      title: stat.title, 
+                      topPerformers: topTeams.map(t => ({ team: t.name, value: t[stat.key as keyof typeof t] + (stat.suffix || '') })) 
+                    })}
+                  >
+                    <Sparkles className="w-3 h-3" />
+                  </Button>
+                </div>
                 <div className="space-y-2">
                   {topTeams.map((team, idx) => (
                     <div key={team.id} className="flex items-center justify-between">
