@@ -45,6 +45,11 @@ export interface Fixture {
   awayScore: number | null;
   round: number;
   status: 'pending' | 'finished';
+  prediction?: {
+    homeScore: number;
+    awayScore: number;
+    reasoning?: string;
+  };
   stats?: {
     possession_home: number;
     possession_away: number;
@@ -122,6 +127,7 @@ interface TournamentState {
   setFixtures: (fixtures: Fixture[]) => void;
   setPlayers: (players: Player[]) => void;
   updateFixtureScore: (fixtureId: string, homeScore: number, awayScore: number, stats?: Fixture['stats']) => void;
+  updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   updateTeam: (teamId: string, updates: Partial<Team>) => void;
   updatePlayerStats: (playerId: string, updates: Partial<Player>) => void;
   addPlayer: (player: Omit<Player, 'id'>) => void;
@@ -293,6 +299,16 @@ export const useStore = create<TournamentState>()(
         set((state) => {
           const updatedFixtures = state.fixtures.map((f) => 
             f.id === fixtureId ? { ...f, homeScore, awayScore, stats, status: 'finished' as const } : f
+          );
+          return { fixtures: updatedFixtures };
+        });
+        get().saveProfile();
+      },
+      
+      updateFixturePrediction: (fixtureId, prediction) => {
+        set((state) => {
+          const updatedFixtures = state.fixtures.map((f) => 
+            f.id === fixtureId ? { ...f, prediction } : f
           );
           return { fixtures: updatedFixtures };
         });

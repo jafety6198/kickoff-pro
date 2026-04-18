@@ -14,7 +14,10 @@ import {
   RotateCcw,
   Users,
   BarChart3,
-  Edit3
+  Edit3,
+  Sparkles,
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,28 +25,100 @@ import { useStore, Fixture, Team, Role } from '@/store/useStore';
 import { calculateStandings } from '@/lib/tournament-engine';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { MatchScanner } from '../scanner/MatchScanner';
 import { PosterGenerator } from '../graphics/PosterGenerator';
 import { MatchManagementModal } from './MatchManagementModal';
 import { SquadManagementModal } from './SquadManagementModal';
 import { TeamManagementModal } from './TeamManagementModal';
 import { StatsDashboard } from './StatsDashboard';
+import { AIOracle } from './AIOracle';
 import { Badge } from '@/components/ui/badge';
+import { ai } from '@/lib/gemini';
 
 interface FixtureCardProps {
   key?: string;
   fixture: Fixture;
   teams: Team[];
+  fixtures: Fixture[];
   role: Role;
   updateFixtureScore: (fixtureId: string, homeScore: number, awayScore: number) => void;
+  updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   onTeamClick?: (team: Team) => void;
 }
 
-function FixtureCard({ fixture, teams, role, updateFixtureScore, onTeamClick }: FixtureCardProps) {
+function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updateFixturePrediction, onTeamClick }: FixtureCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [predicting, setPredicting] = useState(false);
+  const { tournamentName } = useStore();
   const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
   const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
+
+  const handlePredict = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!ai || !homeTeam || !awayTeam) return;
+
+    try {
+      setPredicting(true);
+      
+      // Gather context for AI
+      const getTeamStats = (team: Team) => {
+        const teamFixtures = fixtures.filter(f => 
+          f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id)
+        ).slice(-5);
+        
+        const form = teamFixtures.map(f => {
+          const isHome = f.homeTeamId === team.id;
+          const score = isHome ? f.homeScore! : f.awayScore!;
+          const oppScore = isHome ? f.awayScore! : f.homeScore!;
+          return score > oppScore ? 'W' : score < oppScore ? 'L' : 'D';
+        }).join('');
+
+        return {
+          name: team.name,
+          pts: team.pts,
+          gf: team.gf,
+          ga: team.ga,
+          strength: team.collectiveStrength || 75,
+          playstyle: team.playstyle || 'Balanced',
+          form
+        };
+      };
+
+      const homeContext = getTeamStats(homeTeam);
+      const awayContext = getTeamStats(awayTeam);
+
+      const prompt = `Predict the score for a football match in the "${tournamentName}" league.
+      
+      HOME TEAM: ${JSON.stringify(homeContext)}
+      AWAY TEAM: ${JSON.stringify(awayContext)}
+      
+      Requirements:
+      1. Analyze their form, goals scored/conceded, and collective strength.
+      2. Return ONLY a JSON object with this exact structure: {"homeScore": number, "awayScore": number, "reasoning": "brief 1-sentence tactical reason"}.
+      3. Be realistic. Most scores are between 0-4.
+      
+      Prediction:`;
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-flash-latest',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
+
+      const prediction = JSON.parse(result.text || '{}');
+      if (prediction.homeScore !== undefined) {
+        updateFixturePrediction(fixture.id, prediction);
+        toast.success(`AI Predicted: ${homeTeam.name} ${prediction.homeScore} - ${prediction.awayScore} ${awayTeam.name}`);
+      }
+    } catch (error) {
+      console.error('Prediction Error:', error);
+      toast.error('AI Prediction unavailable at the moment.');
+    } finally {
+      setPredicting(false);
+    }
+  };
 
   const handleClick = (e: React.MouseEvent) => {
     // Prevent expanding/modal if a team link was clicked
@@ -131,9 +206,39 @@ function FixtureCard({ fixture, teams, role, updateFixtureScore, onTeamClick }: 
                       <span>{fixture.awayScore}</span>
                     </>
                   ) : (
-                    <span className="text-xl tracking-[0.3em] ml-1">VS</span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-xl tracking-[0.3em] ml-1">VS</span>
+                      {fixture.prediction && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-1.5 mt-1 bg-primary/10 px-2 py-0.5 rounded-lg"
+                        >
+                          <Sparkles className="w-2.5 h-2.5 text-primary" />
+                          <span className="text-[10px] font-black text-primary">
+                            {fixture.prediction.homeScore}-{fixture.prediction.awayScore}
+                          </span>
+                        </motion.div>
+                      )}
+                    </div>
                   )}
                 </div>
+                
+                {!isFinished && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handlePredict}
+                    disabled={predicting}
+                    className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-primary z-10"
+                  >
+                    {predicting ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3 h-3" />
+                    )}
+                  </Button>
+                )}
                 
                 {fixture.status === 'finished' && (
                   <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm" />
@@ -297,7 +402,7 @@ const PROMOTED_TEAMS = [
 
 export function Dashboard() {
   const { teams, fixtures, updateFixtureScore, role, resetTournament, setStep, setRole, nextSeason, currentProfileId } = useStore();
-  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'squads' | 'stats' | 'scanner' | 'graphics'>('standings');
+  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'squads' | 'stats' | 'oracle' | 'graphics'>('standings');
   const [selectedTeamForSquad, setSelectedTeamForSquad] = useState<Team | null>(null);
   const [selectedTeamForProfile, setSelectedTeamForProfile] = useState<Team | null>(null);
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
@@ -367,7 +472,7 @@ export function Dashboard() {
             { id: 'fixtures', label: 'Fixtures', icon: Calendar },
             { id: 'squads', label: 'Squads', icon: Users },
             { id: 'stats', label: 'Stats', icon: BarChart3 },
-            { id: 'scanner', label: 'Stats Scanner', icon: Scan, adminOnly: true },
+            { id: 'oracle', label: 'AI Oracle', icon: Sparkles, adminOnly: true },
             { id: 'graphics', label: 'Graphics', icon: ImageIcon },
           ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
             const Icon = item.icon;
@@ -454,7 +559,7 @@ export function Dashboard() {
           { id: 'fixtures', icon: Calendar },
           { id: 'squads', icon: Users },
           { id: 'stats', icon: BarChart3 },
-          { id: 'scanner', icon: Scan, adminOnly: true },
+          { id: 'oracle', icon: Sparkles, adminOnly: true },
           { id: 'graphics', icon: ImageIcon },
         ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
           const Icon = item.icon;
@@ -629,8 +734,10 @@ export function Dashboard() {
                             key={fixture.id}
                             fixture={fixture}
                             teams={teams}
+                            fixtures={fixtures}
                             role={role}
                             updateFixtureScore={updateFixtureScore}
+                            updateFixturePrediction={useStore.getState().updateFixturePrediction}
                             onTeamClick={setSelectedTeamForProfile}
                           />
                         ))}
@@ -732,7 +839,7 @@ export function Dashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'scanner' && <MatchScanner />}
+          {activeTab === 'oracle' && <AIOracle />}
           {activeTab === 'graphics' && <PosterGenerator />}
           {activeTab === 'stats' && <StatsDashboard />}
         </AnimatePresence>

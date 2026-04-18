@@ -313,9 +313,26 @@ export function StatsDashboard() {
             {insightLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2 text-primary" />}
             AI Insights
           </Button>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
-            Season Records
-          </div>
+          <Button 
+            onClick={() => {
+              const sortedTeams = [...teamForm].sort((a, b) => b.pts - a.pts);
+              setGraphicData({ 
+                type: 'season-recap', 
+                data: {
+                  teams: sortedTeams,
+                  stats: {
+                    topOffense: teamStats.sort((a,b) => b.totalGoals - a.totalGoals)[0]?.name || 'N/A',
+                    bestForm: teamStats.sort((a,b) => b.pts - a.pts)[0]?.name || 'N/A',
+                    totalGoals: teamStats.reduce((acc, t) => acc + t.totalGoals, 0)
+                  }
+                } 
+              });
+            }}
+            className="rounded-full bg-slate-100 text-slate-900 border border-slate-200 font-black uppercase tracking-widest text-[10px] px-6 h-10 hover:bg-white shadow-xl transition-all"
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Season Recap
+          </Button>
         </div>
       </div>
 
@@ -601,7 +618,15 @@ export function StatsDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 relative">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setGraphicData({ type: 'card-stats', data: { yellows: tournamentStats.totalYellowCards, reds: tournamentStats.totalRedCards } })}
+                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-red-500 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                   <Eye className="w-4 h-4" />
+                </Button>
                 <div className="p-4 rounded-2xl bg-yellow-50 border border-yellow-100 flex flex-col items-center text-center">
                   <p className="text-[9px] font-black text-yellow-600 uppercase tracking-widest mb-1">Yellows</p>
                   <p className="text-3xl font-black text-yellow-700 italic">{tournamentStats.totalYellowCards}</p>
