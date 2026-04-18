@@ -32,7 +32,7 @@ import { TeamManagementModal } from './TeamManagementModal';
 import { StatsDashboard } from './StatsDashboard';
 import { AIOracle } from './AIOracle';
 import { Badge } from '@/components/ui/badge';
-import { ai } from '@/lib/gemini';
+import { calculateLocalPrediction } from '@/lib/predictor';
 
 interface FixtureCardProps {
   key?: string;
@@ -55,66 +55,23 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
 
   const handlePredict = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!ai || !homeTeam || !awayTeam) return;
+    if (!homeTeam || !awayTeam) return;
 
     try {
       setPredicting(true);
       
-      // Gather context for AI
-      const getTeamStats = (team: Team) => {
-        const teamFixtures = fixtures.filter(f => 
-          f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id)
-        ).slice(-5);
-        
-        const form = teamFixtures.map(f => {
-          const isHome = f.homeTeamId === team.id;
-          const score = isHome ? f.homeScore! : f.awayScore!;
-          const oppScore = isHome ? f.awayScore! : f.homeScore!;
-          return score > oppScore ? 'W' : score < oppScore ? 'L' : 'D';
-        }).join('');
+      // Simulate a small delay for "thinking" effect
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-        return {
-          name: team.name,
-          pts: team.pts,
-          gf: team.gf,
-          ga: team.ga,
-          strength: team.collectiveStrength || 75,
-          playstyle: team.playstyle || 'Balanced',
-          form
-        };
-      };
-
-      const homeContext = getTeamStats(homeTeam);
-      const awayContext = getTeamStats(awayTeam);
-
-      const prompt = `Predict the score for a football match in the "${tournamentName}" league.
+      const prediction = calculateLocalPrediction(homeTeam, awayTeam, fixtures);
       
-      HOME TEAM: ${JSON.stringify(homeContext)}
-      AWAY TEAM: ${JSON.stringify(awayContext)}
-      
-      Requirements:
-      1. Analyze their form, goals scored/conceded, and collective strength.
-      2. Return ONLY a JSON object with this exact structure: {"homeScore": number, "awayScore": number, "reasoning": "brief 1-sentence tactical reason"}.
-      3. Be realistic. Most scores are between 0-4.
-      
-      Prediction:`;
-
-      const result = await ai.models.generateContent({
-        model: 'gemini-flash-latest',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json'
-        }
-      });
-
-      const prediction = JSON.parse(result.text || '{}');
       if (prediction.homeScore !== undefined) {
         updateFixturePrediction(fixture.id, prediction);
-        toast.success(`AI Predicted: ${homeTeam.name} ${prediction.homeScore} - ${prediction.awayScore} ${awayTeam.name}`);
+        toast.success(`Predicted: ${homeTeam.name} ${prediction.homeScore} - ${prediction.awayScore} ${awayTeam.name}`);
       }
     } catch (error) {
       console.error('Prediction Error:', error);
-      toast.error('AI Prediction unavailable at the moment.');
+      toast.error('Prediction engine encountered an error.');
     } finally {
       setPredicting(false);
     }

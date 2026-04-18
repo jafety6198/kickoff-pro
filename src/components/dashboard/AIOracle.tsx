@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Sparkles, Loader2, Brain, Zap, Target, TrendingUp, ChevronRight, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useStore, Fixture, Team } from '@/store/useStore';
-import { ai } from '@/lib/gemini';
+import { calculateLocalPrediction } from '@/lib/predictor';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -21,64 +21,22 @@ export function AIOracle() {
     const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
     const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
     
-    if (!ai || !homeTeam || !awayTeam) return;
+    if (!homeTeam || !awayTeam) return;
 
     try {
       setPredictingId(fixture.id);
       
-      const getTeamStats = (team: Team) => {
-        const teamFixtures = fixtures.filter(f => 
-          f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id)
-        ).slice(-5);
-        
-        const form = teamFixtures.map(f => {
-          const isHome = f.homeTeamId === team.id;
-          const score = isHome ? f.homeScore! : f.awayScore!;
-          const oppScore = isHome ? f.awayScore! : f.homeScore!;
-          return score > oppScore ? 'W' : score < oppScore ? 'L' : 'D';
-        }).join('');
+      // Simulate a small delay for "thinking" effect
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-        return {
-          name: team.name,
-          pts: team.pts,
-          gf: team.gf,
-          ga: team.ga,
-          strength: team.collectiveStrength || 75,
-          playstyle: team.playstyle || 'Balanced',
-          form
-        };
-      };
-
-      const homeContext = getTeamStats(homeTeam);
-      const awayContext = getTeamStats(awayTeam);
-
-      const prompt = `Predict the score for a football match in the "${tournamentName}" league.
+      const prediction = calculateLocalPrediction(homeTeam, awayTeam, fixtures);
       
-      HOME TEAM: ${JSON.stringify(homeContext)}
-      AWAY TEAM: ${JSON.stringify(awayContext)}
-      
-      Requirements:
-      1. Analyze their form, goals scored/conceded, and collective strength.
-      2. Return ONLY a JSON object with this exact structure: {"homeScore": number, "awayScore": number, "reasoning": "brief 1-sentence tactical reason"}.
-      3. Be realistic. Most scores are between 0-4.
-      
-      Prediction:`;
-
-      const result = await ai.models.generateContent({
-        model: 'gemini-flash-latest',
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json'
-        }
-      });
-
-      const prediction = JSON.parse(result.text || '{}');
       if (prediction.homeScore !== undefined) {
         updateFixturePrediction(fixture.id, prediction);
       }
     } catch (error) {
       console.error('Prediction Error:', error);
-      toast.error('AI Prediction failed for this match.');
+      toast.error('Prediction engine encountered a calculation error.');
     } finally {
       setPredictingId(null);
     }
@@ -150,7 +108,7 @@ export function AIOracle() {
           </div>
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Model Engine</p>
-            <p className="text-xl font-black text-slate-900 italic">Gemini 1.5 Flash</p>
+            <p className="text-xl font-black text-slate-900 italic">Lumina Math Engine</p>
           </div>
         </div>
         <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center gap-4">
@@ -208,7 +166,7 @@ export function AIOracle() {
                                {fixture.prediction.homeScore} - {fixture.prediction.awayScore}
                              </div>
                              <Badge className="bg-primary text-white border-none font-black text-[9px] uppercase tracking-widest">
-                               AI Forecast
+                               Math Forecast
                              </Badge>
                            </div>
                            <p className="text-xs text-slate-500 font-medium italic border-l-2 border-primary/20 pl-3">

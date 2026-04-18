@@ -1,12 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Scan, Upload, Loader2, CheckCircle2, AlertCircle, FileText, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ai } from '@/lib/gemini';
 import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { Type } from '@google/genai';
 import { cn } from '@/lib/utils';
 import { SquadScanner } from './SquadScanner';
 import { scanMatchStats, ScannedMatchResult } from '@/lib/match-scanner';
@@ -228,7 +226,7 @@ export function MatchScanner() {
               {scanning ? (
                 <>
                   <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                  Analyzing with Gemini...
+                  Analyzing with Math Engine...
                 </>
               ) : (
                 <>

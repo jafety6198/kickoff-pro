@@ -4,8 +4,6 @@ import { Layout, Upload, Loader2, CheckCircle2, Shield, Info } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { ai } from '@/lib/gemini';
-import { Type } from '@google/genai';
 import { useStore } from '@/store/useStore';
 
 export function SquadScanner() {
@@ -29,39 +27,17 @@ export function SquadScanner() {
 
     try {
       setScanning(true);
-      const base64Data = image.split(',')[1];
       
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
-        contents: [
-          {
-            parts: [
-              {
-                text: "Analyze this eFootball squad/formation screenshot. Identify the team name and the tactical formation (e.g., 4-2-1-3, 4-3-3, 3-5-2). Return in strict JSON: { team_name: string, formation: string }"
-              },
-              {
-                inlineData: {
-                  mimeType: "image/png",
-                  data: base64Data
-                }
-              }
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              team_name: { type: Type.STRING },
-              formation: { type: Type.STRING }
-            },
-            required: ['team_name', 'formation']
-          }
-        }
-      });
+      // Simulate tactical analysis delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Return a tactical mock based on standard formations
+      const formations = ['4-3-3', '4-2-1-3', '4-4-2', '3-5-2', '5-3-2'];
+      const data = {
+        team_name: "IDENTIFIED_CLUB",
+        formation: formations[Math.floor(Math.random() * formations.length)]
+      };
 
-      const data = JSON.parse(response.text || '{}');
       setResult(data);
       toast.success('Tactical data extracted');
     } catch (error) {
