@@ -14,10 +14,12 @@ import {
   Loader2,
   Sparkles,
   Copy,
-  Eye
+  Eye,
+  Layout
 } from 'lucide-react';
 import { StatGraphicModal } from '@/components/dashboard/StatGraphicModal';
 import { useStore, Team, Fixture, Player } from '@/store/useStore';
+import { calculateStandings } from '@/lib/tournament-engine';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -120,7 +122,9 @@ export function StatsDashboard() {
   };
 
   const teamStats = useMemo(() => {
+    const standings = calculateStandings(teams, fixtures);
     return teams.map(team => {
+      const standing = standings.find(s => s.id === team.id);
       let goals = 0;
       let passes = 0;
       let saves = 0;
@@ -191,6 +195,10 @@ export function StatsDashboard() {
         totalInterceptions: interceptions,
         totalTackles: tackles,
         avgPossession: possessionCount > 0 ? Math.round(possessionTotal / possessionCount) : 0,
+        pts: standing?.pts || 0,
+        form: standing?.form || [],
+        played: standing?.played || 0,
+        gd: standing?.gd || 0,
       };
     });
   }, [teams, fixtures]);
@@ -265,6 +273,32 @@ export function StatsDashboard() {
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Quick Insights Hero */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        {[
+          { label: 'Season Goals', value: teamStats.reduce((acc, t) => acc + t.totalGoals, 0), icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+          { label: 'Total Passes', value: teamStats.reduce((acc, t) => acc + t.totalPasses, 0).toLocaleString(), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Matches Played', value: fixtures.filter(f => f.status === 'finished').length, icon: Activity, color: 'text-purple-500', bg: 'bg-purple-50' },
+          { label: 'Avg Attendance', value: '42.5K', icon: Users, color: 'text-amber-500', bg: 'bg-amber-50' },
+        ].map((stat, i) => (
+          <motion.div 
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="p-6 rounded-[2.5rem] bg-white border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-xl transition-all"
+          >
+            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", stat.bg)}>
+              <stat.icon className={cn("w-6 h-6", stat.color)} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">{stat.label}</p>
+              <p className="text-2xl font-black text-slate-900 tracking-tighter italic">{stat.value}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Tournament Stats</h2>
         <div className="flex items-center gap-3">
@@ -278,14 +312,27 @@ export function StatsDashboard() {
           </Button>
           <Button 
             onClick={() => {
-              const sortedTeams = [...teamForm].sort((a, b) => b.pts - a.pts);
+              const sortedTeams = [...teamStats].sort((a, b) => b.pts - a.pts);
+              setGraphicData({ 
+                type: 'power-form', 
+                data: sortedTeams.slice(0, 5)
+              });
+            }}
+            className="rounded-full bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] px-6 h-10 hover:bg-slate-800 shadow-xl transition-all"
+          >
+             <Layout className="w-4 h-4 mr-2 text-[#00FF85]" />
+             Social Media Post
+          </Button>
+          <Button 
+            onClick={() => {
+              const sortedTeams = [...teamStats].sort((a, b) => b.pts - a.pts);
               setGraphicData({ 
                 type: 'season-recap', 
                 data: {
                   teams: sortedTeams,
                   stats: {
-                    topOffense: teamStats.sort((a,b) => b.totalGoals - a.totalGoals)[0]?.name || 'N/A',
-                    bestForm: teamStats.sort((a,b) => b.pts - a.pts)[0]?.name || 'N/A',
+                    topOffense: [...teamStats].sort((a,b) => b.totalGoals - a.totalGoals)[0]?.name || 'N/A',
+                    bestForm: [...teamStats].sort((a,b) => b.pts - a.pts)[0]?.name || 'N/A',
                     totalGoals: teamStats.reduce((acc, t) => acc + t.totalGoals, 0)
                   }
                 } 

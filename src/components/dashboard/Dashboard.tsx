@@ -554,88 +554,141 @@ export function Dashboard() {
               className="space-y-6 sm:space-y-8"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">League Standings</h2>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
-                  Live Updates
+                <div className="space-y-1">
+                  <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">League Standings</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Season 2024/25 • Live Competition</p>
+                </div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Live Updates</span>
                 </div>
               </div>
 
-              <div className="glass-card overflow-x-auto no-scrollbar">
-                <table className="w-full text-left min-w-[600px]">
-                  <thead>
-                    <tr className="text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                      <th className="px-6 py-4">Pos</th>
-                      <th className="px-6 py-4">Team</th>
-                      <th className="px-4 py-4 text-center">Pl</th>
-                      <th className="px-4 py-4 text-center">W</th>
-                      <th className="px-4 py-4 text-center">D</th>
-                      <th className="px-4 py-4 text-center">L</th>
-                      <th className="px-4 py-4 text-center">GF</th>
-                      <th className="px-4 py-4 text-center">GA</th>
-                      <th className="px-4 py-4 text-center">GD</th>
-                      <th className="px-4 py-4 text-center">Form</th>
-                      <th className="px-6 py-4 text-right">Pts</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {standings.map((team, i) => {
-                      // Calculate last 5 matches form
-                      const teamFixtures = fixtures
-                        .filter(f => f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id))
-                        .sort((a, b) => b.round - a.round)
-                        .slice(0, 5);
-                      
-                      const form = teamFixtures.map(f => {
-                        const isHome = f.homeTeamId === team.id;
-                        const won = isHome ? (f.homeScore! > f.awayScore!) : (f.awayScore! > f.homeScore!);
-                        const drawn = f.homeScore === f.awayScore;
-                        return won ? 'W' : drawn ? 'D' : 'L';
-                      });
+              <div className="relative glass-card overflow-hidden">
+                <div className="overflow-x-auto no-scrollbar">
+                  <table className="w-full text-left min-w-[800px]">
+                    <thead>
+                      <tr className="bg-slate-50/50 text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] border-b border-slate-100">
+                        <th className="px-6 py-5 text-center w-20">POS</th>
+                        <th className="px-6 py-5">TEAM</th>
+                        <th className="px-4 py-5 text-center">PL</th>
+                        <th className="px-4 py-5 text-center">W</th>
+                        <th className="px-4 py-5 text-center">D</th>
+                        <th className="px-4 py-5 text-center">L</th>
+                        <th className="px-4 py-5 text-center">GF</th>
+                        <th className="px-4 py-5 text-center">GA</th>
+                        <th className="px-4 py-5 text-center">GD</th>
+                        <th className="px-6 py-5 text-center w-40">FORM</th>
+                        <th className="px-8 py-5 text-right w-24">PTS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {standings.map((team, i) => {
+                        const isTopThree = i < 3;
+                        const rankColor = i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-orange-400' : 'text-slate-400';
+                        const bgColor = i === 0 ? 'bg-amber-50/30' : i === 1 ? 'bg-slate-50/30' : i === 2 ? 'bg-orange-50/30' : 'bg-transparent';
 
-                      return (
-                        <tr key={team.id} className="group hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 font-bold text-slate-900">{i + 1}</td>
-                          <td className="px-6 py-4">
-                            <div 
-                              className={cn(
-                                "flex items-center gap-3",
-                                role === 'admin' && "cursor-pointer hover:text-primary transition-colors"
-                              )}
-                              onClick={() => {
-                                if (role === 'admin') {
-                                  setSelectedTeamForProfile(team);
-                                }
-                              }}
-                            >
-                              <img src={team.logo} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
-                              <span className="text-sm font-semibold">{team.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.played}</td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.won}</td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.drawn}</td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.lost}</td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.gf}</td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.ga}</td>
-                          <td className="px-4 py-4 text-center text-sm text-slate-600">{team.gd}</td>
-                          <td className="px-4 py-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              {form.map((result, idx) => (
-                                <span key={idx} className={cn(
-                                  "w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-sm text-white",
-                                  result === 'W' ? "bg-green-500" : result === 'D' ? "bg-slate-400" : "bg-red-500"
+                        return (
+                          <motion.tr 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            key={team.id} 
+                            className={cn(
+                              "group hover:bg-slate-100/50 transition-colors relative",
+                              bgColor
+                            )}
+                          >
+                            <td className="px-6 py-5 text-center">
+                              <div className="flex items-center justify-center">
+                                <span className={cn(
+                                  "text-2xl font-black italic tracking-tighter tabular-nums",
+                                  isTopThree ? rankColor : "text-slate-900 opacity-20"
                                 )}>
-                                  {result}
+                                  {i + 1}
                                 </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right font-bold text-slate-900">{team.pts}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              </div>
+                            </td>
+                            <td className="px-6 py-5">
+                              <div 
+                                className={cn(
+                                  "flex items-center gap-4",
+                                  role === 'admin' && "cursor-pointer hover:text-primary transition-all group/team"
+                                )}
+                                onClick={() => {
+                                  if (role === 'admin') {
+                                    setSelectedTeamForProfile(team);
+                                  }
+                                }}
+                              >
+                                <div className="relative">
+                                  <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-100 p-2 flex items-center justify-center transition-transform group-hover/team:scale-110">
+                                    <img src={team.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                  </div>
+                                  {i === 0 && (
+                                    <div className="absolute -top-2 -right-2 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center shadow-lg">
+                                      <Trophy className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-base font-black uppercase tracking-tight text-slate-900">{team.name}</span>
+                                  {isTopThree && (
+                                    <span className={cn("text-[9px] font-bold uppercase tracking-widest", rankColor)}>
+                                      {i === 0 ? 'League Leader' : i === 1 ? 'Title Contender' : 'Champions Zone'}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-5 text-center text-sm font-bold text-slate-600 tabular-nums">{team.played}</td>
+                            <td className="px-4 py-5 text-center text-sm font-bold text-slate-600 tabular-nums">{team.won}</td>
+                            <td className="px-4 py-5 text-center text-sm font-bold text-slate-600 tabular-nums">{team.drawn}</td>
+                            <td className="px-4 py-5 text-center text-sm font-bold text-slate-600 tabular-nums">{team.lost}</td>
+                            <td className="px-4 py-5 text-center text-sm font-bold text-slate-400 tabular-nums opacity-60">{team.gf}</td>
+                            <td className="px-4 py-5 text-center text-sm font-bold text-slate-400 tabular-nums opacity-60">{team.ga}</td>
+                            <td className={cn(
+                              "px-4 py-5 text-center text-sm font-black tabular-nums",
+                              team.gd > 0 ? "text-green-600" : team.gd < 0 ? "text-red-600" : "text-slate-400"
+                            )}>
+                              {team.gd > 0 ? `+${team.gd}` : team.gd}
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {team.form?.map((result, idx) => (
+                                  <div key={idx} className={cn(
+                                    "w-6 h-6 flex items-center justify-center text-[9px] font-black rounded-md text-white shadow-sm transition-transform hover:scale-110",
+                                    result === 'W' ? "bg-green-500" : result === 'D' ? "bg-slate-400" : "bg-red-500"
+                                  )}>
+                                    {result}
+                                  </div>
+                                ))}
+                                {(!team.form || team.form.length === 0) && (
+                                  <span className="text-[10px] font-black text-slate-300 uppercase italic tracking-widest">No Matches</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 text-right font-black text-2xl italic tracking-tighter text-slate-900 tabular-nums drop-shadow-sm">
+                              {team.pts}
+                            </td>
+                          </motion.tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Visual Legend */}
+                <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Winner / Champions League</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Europa League Spot</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}

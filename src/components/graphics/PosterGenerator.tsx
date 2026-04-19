@@ -18,12 +18,18 @@ import {
 } from '@/components/ui/select';
 
 const templates = [
+  { id: 'pl-result-hero', name: 'Official Result', color: 'bg-pl-purple', accent: '#00FF85' },
+  { id: 'pl-round-schedule', name: 'Matchday Schedule', color: 'bg-white', accent: '#3D195B' },
+  { id: 'pl-standings-vertical', name: 'Modern Standings', color: 'bg-white', accent: '#3D195B' },
+  { id: 'pl-vs-modern', name: 'Duel Poster', color: 'bg-pl-purple', accent: '#00FF85' },
+  { id: 'pl-run-in-grid', name: 'Run-In Comparison', color: 'bg-white', accent: '#3D195B' },
   { id: 'pl-broadcast', name: 'PL Broadcast', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'pl-matchday', name: 'PL Match Day', color: 'bg-pl-purple', accent: '#00FF85' },
   { id: 'pl-fixtures', name: 'PL Fixtures', color: 'bg-white', accent: '#3D195B' },
   { id: 'pl-standings', name: 'PL Standings', color: 'bg-white', accent: '#3D195B' },
   { id: 'pl-full-table', name: 'PL Full Table', color: 'bg-white', accent: '#3D195B' },
   { id: 'pl-top-six', name: 'PL Top Six', color: 'bg-white', accent: '#00FF85' },
+  { id: 'pl-power-form', name: 'Power Form Recap', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'pl-stats', name: 'PL Match Stats', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'pl-squad', name: 'PL Squad', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'big-game', name: 'Big Game', color: 'bg-[#0a0a0a]', accent: 'yellow' },
@@ -51,8 +57,10 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         const availableHeight = canvasRef.current.clientHeight - padding;
         const targetWidth = 
           template.id === 'pl-full-table' ? 1400 : 
-          template.id === 'pl-fixtures' ? 1000 : 
-          template.id === 'pl-standings' ? 1000 : 700;
+          template.id === 'pl-fixtures' || template.id === 'pl-round-schedule' || template.id === 'pl-power-form' ? 1000 : 
+          template.id === 'pl-standings' || template.id === 'pl-standings-vertical' ? 1000 : 
+          template.id === 'pl-vs-modern' ? 1000 : 
+          template.id === 'pl-run-in-grid' ? 1200 : 700;
         const targetHeight = 850; 
         
         const scaleW = availableWidth / targetWidth;
@@ -117,9 +125,10 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
     try {
       setGenerating(true);
       const downloadWidth = 
-        template.id === 'pl-full-table' ? 2200 : 
-        template.id === 'pl-fixtures' ? 1800 : 
-        template.id === 'pl-standings' ? 1800 : 1400;
+        template.id === 'pl-full-table' || template.id === 'pl-run-in-grid' ? 2200 : 
+        template.id === 'pl-fixtures' || template.id === 'pl-round-schedule' || template.id === 'pl-power-form' ? 1800 : 
+        template.id === 'pl-standings' || template.id === 'pl-standings-vertical' ? 1800 : 
+        template.id === 'pl-vs-modern' ? 1800 : 1400;
       const dataUrl = await toPng(posterRef.current, {
         quality: 1,
         pixelRatio: 2, // For high definition
@@ -144,6 +153,444 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
     if (!selectedFixture) return null;
 
     switch (template.id) {
+      case 'pl-power-form':
+        return (
+          <div className="w-full h-full bg-[#3D195B] relative overflow-hidden flex flex-col p-12">
+            {/* Background elements */}
+            <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_0%,#00FF85,transparent_70%)]" />
+            </div>
+            
+            <div className="relative z-10 w-full flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-12 border-b border-white/10 pb-8">
+                 <div className="flex items-center gap-6">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-16 h-16 brightness-0 invert" alt="PL" />
+                    <div className="h-12 w-0.5 bg-white/20" />
+                    <div>
+                      <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic">POWER FORM</h1>
+                      <p className="text-[#00FF85] text-[10px] font-black uppercase tracking-[0.4em]">Tournament Leaders</p>
+                    </div>
+                 </div>
+                 <div className="bg-[#00FF85] text-[#3D195B] px-6 py-2 rounded-full font-black uppercase text-xs tracking-widest skew-x-[-12deg]">
+                    TOP PERFORMERS
+                 </div>
+              </div>
+
+              <div className="flex-1 flex flex-col gap-4">
+                 {standings.slice(0, 5).map((team, idx) => (
+                    <motion.div 
+                      key={team.id}
+                      initial={{ opacity: 0, x: -30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="bg-white/5 border border-white/10 rounded-[2rem] p-6 flex items-center justify-between group hover:bg-white/10 transition-all hover:scale-[1.02]"
+                    >
+                       <div className="flex items-center gap-6">
+                          <span className="text-4xl font-black italic text-white/20 w-8">{idx + 1}</span>
+                          <div className="w-16 h-16 bg-white rounded-2xl p-3 shadow-2xl">
+                             <img src={team.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          </div>
+                          <div>
+                             <h2 className="text-2xl font-black text-white uppercase tracking-tighter">{team.name}</h2>
+                             <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-black text-[#00FF85] uppercase tracking-widest">Points:</span>
+                                <span className="text-lg font-black text-white italic leading-none">{team.pts}</span>
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="flex flex-col items-end gap-3">
+                          <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Recent Form</p>
+                          <div className="flex gap-2">
+                             {team.form?.map((res, i) => (
+                                <div key={i} className={cn(
+                                   "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-lg",
+                                   res === 'W' ? "bg-[#00FF85] text-[#3D195B]" : res === 'L' ? "bg-[#FF005A]" : "bg-white/20"
+                                )}>
+                                   {res}
+                                </div>
+                             ))}
+                          </div>
+                       </div>
+                    </motion.div>
+                 ))}
+              </div>
+
+              <div className="mt-12 flex items-center justify-between pt-8 border-t border-white/10">
+                 <div className="flex items-center gap-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-8 h-8 brightness-0 invert opacity-40" alt="PL" />
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Official Season Power Rankings Recap</p>
+                 </div>
+                 <p className="text-sm font-black text-[#00FF85] uppercase tracking-tighter italic">{tournamentName}</p>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'pl-result-hero':
+        return (
+          <div className="w-full h-full bg-[#3D195B] relative overflow-hidden flex flex-col items-center">
+            {/* Background Hero Image */}
+            <div className="absolute inset-0 z-0">
+               <img 
+                 src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=2400&auto=format&fit=crop" 
+                 className="w-full h-full object-cover opacity-80 scale-105"
+                 referrerPolicy="no-referrer"
+               />
+               <div className="absolute inset-0 bg-gradient-to-t from-[#3D195B] via-transparent to-transparent opacity-90" />
+               <div className="absolute inset-0 bg-[#3D195B]/30 backdrop-blur-[2px]" />
+            </div>
+
+            <div className="relative z-10 w-full h-full flex flex-col justify-between p-12">
+              <div className="flex items-center justify-between">
+                <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-14 h-14 brightness-0 invert" alt="PL" />
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-[#00FF85] uppercase tracking-[0.4em] leading-none mb-1">Official Result</p>
+                  <p className="text-xs font-bold text-white/60 uppercase tracking-widest">{tournamentName}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-12">
+                <div className="flex items-center gap-8">
+                   <div className="flex flex-col items-center gap-3">
+                      <img src={selectedFixture.team_a?.logo_url} className="w-20 h-20 object-contain drop-shadow-2xl" referrerPolicy="no-referrer" />
+                      <span className="text-xl font-black text-white uppercase tracking-tighter">{selectedFixture.team_a?.name}</span>
+                   </div>
+                   
+                   <div className="relative">
+                      <div className="bg-[#00FF85] px-10 py-6 rounded-[2rem] shadow-[0_20px_50px_rgba(0,255,133,0.3)] rotate-[-2deg] flex items-center gap-6">
+                        <span className="text-7xl font-black text-[#3D195B] italic leading-none">{selectedFixture.score_a}</span>
+                        <div className="w-1.5 h-12 bg-[#3D195B]/20 rounded-full" />
+                        <span className="text-7xl font-black text-[#3D195B] italic leading-none">{selectedFixture.score_b}</span>
+                      </div>
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#3D195B] px-4 py-1 rounded-full border-2 border-[#00FF85]">
+                         <span className="text-[10px] font-black text-[#00FF85] uppercase tracking-widest italic">Full Time</span>
+                      </div>
+                   </div>
+
+                   <div className="flex flex-col items-center gap-3">
+                      <img src={selectedFixture.team_b?.logo_url} className="w-20 h-20 object-contain drop-shadow-2xl" referrerPolicy="no-referrer" />
+                      <span className="text-xl font-black text-white uppercase tracking-tighter">{selectedFixture.team_b?.name}</span>
+                   </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-2">
+                   <div className="h-[2px] w-24 bg-gradient-to-r from-transparent via-[#00FF85] to-transparent mb-4" />
+                   <div className="flex flex-wrap justify-center gap-8 text-white/80">
+                      <div className="flex flex-col items-end gap-1">
+                         <p className="text-[10px] font-black uppercase text-[#00FF85] tracking-widest">Scorers</p>
+                         <p className="text-sm font-bold uppercase italic">Haaland 22', 45'</p>
+                      </div>
+                      <div className="w-[1px] h-8 bg-white/20" />
+                      <div className="flex flex-col items-start gap-1">
+                         <p className="text-[10px] font-black uppercase text-[#00FF85] tracking-widest">Scorers</p>
+                         <p className="text-sm font-bold uppercase italic">Son 12'</p>
+                      </div>
+                   </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-white/10 pt-8 mt-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-white/40" />
+                  </div>
+                  <div>
+                    <p className="text-[8px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Match Date</p>
+                    <p className="text-sm font-black text-white uppercase">{safeFormatDate(selectedFixture.match_date, 'EEEE, MMMM do')}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[8px] font-black text-white/40 uppercase tracking-widest leading-none mb-1">Venue</p>
+                  <p className="text-sm font-black text-white uppercase italic tracking-tighter">KickOff Main Arena</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'pl-round-schedule':
+        const rFixtures = fixtures.filter(f => f.round === selectedRound);
+        return (
+          <div className="w-full h-full bg-white relative overflow-hidden flex flex-col">
+            {/* Split Background */}
+            <div className="absolute top-0 right-0 w-2/3 h-full overflow-hidden">
+               <img 
+                 src="https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?q=80&w=2400&auto=format&fit=crop" 
+                 className="w-full h-full object-cover brightness-50 contrast-125"
+                 referrerPolicy="no-referrer"
+               />
+               <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent" />
+            </div>
+
+            <div className="relative z-10 w-full h-full flex flex-col p-16">
+              <div className="flex items-center gap-6 mb-12">
+                 <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-20 h-20" alt="PL" />
+                 <div className="h-16 w-[3px] bg-[#3D195B]" />
+                 <div>
+                    <h1 className="text-5xl font-black text-[#3D195B] uppercase tracking-tighter leading-none">Schedule</h1>
+                    <p className="text-sm font-black text-[#3D195B]/40 uppercase tracking-[0.3em]">Matchweek {selectedRound}</p>
+                 </div>
+              </div>
+
+              <div className="flex-1 space-y-3">
+                 {rFixtures.map((f, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 p-4 flex items-center justify-between group hover:border-[#3D195B]/20 transition-all"
+                    >
+                       <div className="flex items-center gap-4 flex-1">
+                          <img src={f.team_a?.logo_url} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                          <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter">{f.team_a?.name}</span>
+                       </div>
+                       
+                       <div className="bg-[#3D195B] text-white px-6 py-2 rounded-xl flex flex-col items-center justify-center min-w-[100px] shadow-lg group-hover:scale-105 transition-transform">
+                          <span className="text-xs font-black text-[#00FF85] tracking-[0.2em] mb-0.5 uppercase">v</span>
+                          <span className="text-lg font-black italic tracking-tighter leading-none">
+                             {f.status === 'finished' ? `${f.score_a} - ${f.score_b}` : '15:00'}
+                          </span>
+                       </div>
+
+                       <div className="flex items-center gap-4 flex-1 justify-end">
+                          <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter text-right">{f.team_b?.name}</span>
+                          <img src={f.team_b?.logo_url} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                       </div>
+                    </motion.div>
+                 ))}
+              </div>
+
+              <div className="mt-12 flex items-center justify-between border-t border-slate-100 pt-8">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-slate-300" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Broadcast Schedule MW{selectedRound}</span>
+                </div>
+                <Badge className="bg-[#3D195B] text-white border-none font-black uppercase tracking-widest px-4 py-1">LIVE ON KICKOFF TV</Badge>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'pl-standings-vertical':
+        return (
+          <div className="w-full h-full bg-white relative overflow-hidden flex">
+            {/* Dark Side Panel */}
+            <div className="w-1/4 h-full bg-[#3D195B] relative flex flex-col p-10 justify-between">
+               <div className="space-y-6">
+                 <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-16 h-16 brightness-0 invert" alt="PL" />
+                 <div className="space-y-1">
+                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">The</h1>
+                    <h1 className="text-6xl font-black text-[#00FF85] uppercase tracking-tighter italic leading-none">Table</h1>
+                 </div>
+               </div>
+
+               <div className="bg-white/5 p-6 rounded-3xl border border-white/10">
+                  <p className="text-[10px] font-black text-[#00FF85] uppercase tracking-widest mb-2">Current MW</p>
+                  <p className="text-4xl font-black text-white italic">{selectedRound}</p>
+                  <div className="w-full h-1 bg-white/10 mt-4 rounded-full overflow-hidden">
+                     <div className="w-[85%] h-full bg-[#00FF85]" />
+                  </div>
+               </div>
+            </div>
+
+            <div className="flex-1 h-full p-12 flex flex-col">
+              <div className="mb-8 flex items-end justify-between border-b pb-4">
+                 <h2 className="text-xl font-black text-[#3D195B] uppercase tracking-[0.2em]">{tournamentName} Standing</h2>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Updated Today • Live</p>
+              </div>
+
+              <div className="space-y-1 overflow-hidden">
+                 {standings.slice(0, 10).map((team, i) => (
+                    <div key={team.id} className="grid grid-cols-[50px_60px_1fr_60px_60px] items-center py-4 px-4 hover:bg-slate-50 border-b border-slate-50 transition-colors group">
+                       <span className={cn(
+                         "text-2xl font-black italic",
+                         i < 4 ? "text-[#00FF85] drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]" : "text-[#3D195B]/20"
+                       )}>{i + 1}</span>
+                       <div className="flex justify-center">
+                          <img src={team.logo} className="w-9 h-9 object-contain" referrerPolicy="no-referrer" />
+                       </div>
+                       <span className="text-xl font-black text-[#3D195B] uppercase tracking-tighter pl-4 group-hover:translate-x-1 transition-transform">{team.name}</span>
+                       <span className="text-center font-bold text-slate-400 text-sm">{team.played}P</span>
+                       <span className="text-center text-2xl font-black text-[#3D195B] tabular-nums bg-slate-100 rounded-lg py-1">{team.pts}</span>
+                    </div>
+                 ))}
+                 <div className="pt-4 flex justify-center text-[10px] font-black text-[#3D195B]/40 uppercase tracking-[0.3em] italic">
+                    Full table continued below...
+                 </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'pl-vs-modern':
+        return (
+          <div className="w-full h-full bg-[#3D195B] relative overflow-hidden flex flex-col items-center">
+            {/* Background Texture elements */}
+            <div className="absolute inset-0 opacity-10">
+               <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#00FF85] rounded-full blur-[150px] -translate-y-1/2 translate-x-1/2" />
+               <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#FF005A] rounded-full blur-[150px] translate-y-1/2 -translate-x-1/2" />
+            </div>
+
+            <div className="relative z-10 w-full h-full flex flex-col p-12">
+               <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                     <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-14 h-14" alt="PL" />
+                     <div className="h-10 w-[2px] bg-white text-white/20" />
+                     <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">BIG GAME WEEKEND</h2>
+                  </div>
+                  <div className="text-right">
+                     <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Match Date</p>
+                     <p className="text-sm font-black text-white uppercase tracking-tighter">{safeFormatDate(selectedFixture.match_date, 'EEEE, MMM do • HH:mm')}</p>
+                  </div>
+               </div>
+
+               <div className="flex-1 flex items-center justify-center gap-16 relative">
+                  {/* Central "VS" Glow */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[300px] font-black text-white/5 italic select-none">VS</div>
+                  
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0, x: -50 }}
+                    animate={{ scale: 1, opacity: 1, x: 0 }}
+                    className="flex flex-col items-center gap-8 z-20"
+                  >
+                     <div className="relative">
+                        <div className="w-56 h-56 rounded-[3rem] bg-gradient-to-br from-white/10 to-transparent border-2 border-white/20 p-10 backdrop-blur-3xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
+                           <img src={selectedFixture.team_a?.logo_url} className="w-full h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)]" referrerPolicy="no-referrer" />
+                        </div>
+                        <div className="absolute -bottom-4 -left-4 bg-[#00FF85] text-[#3D195B] p-4 rounded-2xl font-black text-2xl italic shadow-2xl skew-x-[-12deg]">HOME</div>
+                     </div>
+                     <h3 className="text-3xl font-black text-white uppercase tracking-tighter text-center max-w-[200px] leading-none drop-shadow-lg">{selectedFixture.team_a?.name}</h3>
+                  </motion.div>
+
+                  <div className="flex flex-col items-center gap-4 z-20">
+                     <div className="text-7xl font-black text-[#00FF85] italic tracking-tighter drop-shadow-[0_0_30px_rgba(0,255,133,0.5)]">VS</div>
+                     <div className="px-6 py-2 bg-white/5 rounded-full border border-white/10 backdrop-blur-xl">
+                        <span className="text-xs font-black text-white tracking-widest uppercase">Live Coverage</span>
+                     </div>
+                  </div>
+
+                  <motion.div 
+                    initial={{ scale: 0.8, opacity: 0, x: 50 }}
+                    animate={{ scale: 1, opacity: 1, x: 0 }}
+                    className="flex flex-col items-center gap-8 z-20"
+                  >
+                     <div className="relative">
+                        <div className="w-56 h-56 rounded-[3rem] bg-gradient-to-br from-white/10 to-transparent border-2 border-white/20 p-10 backdrop-blur-3xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
+                           <img src={selectedFixture.team_b?.logo_url} className="w-full h-full object-contain filter drop-shadow-[0_20px_40px_rgba(0,0,0,0.3)]" referrerPolicy="no-referrer" />
+                        </div>
+                        <div className="absolute -bottom-4 -right-4 bg-white text-[#3D195B] p-4 rounded-2xl font-black text-2xl italic shadow-2xl skew-x-[12deg]">AWAY</div>
+                     </div>
+                     <h3 className="text-3xl font-black text-white uppercase tracking-tighter text-center max-w-[200px] leading-none drop-shadow-lg">{selectedFixture.team_b?.name}</h3>
+                  </motion.div>
+               </div>
+
+               <div className="mt-8 flex justify-center">
+                  <div className="bg-[#00FF85] px-12 py-6 rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.4)] flex items-center gap-12">
+                     <div className="flex flex-col items-center border-r border-[#3D195B]/10 pr-12">
+                        <p className="text-[10px] font-black text-[#3D195B] uppercase tracking-widest mb-1">Win Probability</p>
+                        <p className="text-4xl font-black text-[#3D195B] italic">54%</p>
+                     </div>
+                     <div className="flex flex-col items-center">
+                        <p className="text-[10px] font-black text-[#3D195B] uppercase tracking-widest mb-1">Venue Power</p>
+                        <p className="text-4xl font-black text-[#3D195B] italic tracking-tighter">HIGH</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+        );
+
+      case 'pl-run-in-grid':
+        const focusTeams = [selectedFixture.homeTeamId, selectedFixture.awayTeamId].filter(Boolean);
+        return (
+          <div className="w-full h-full bg-slate-50 relative overflow-hidden flex flex-col p-12">
+            <div className="flex items-center justify-between mb-12">
+               <div className="flex items-center gap-4">
+                  <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_Logo.svg" className="w-16 h-16" alt="PL" />
+                  <div className="h-12 w-0.5 bg-slate-200" />
+                  <h1 className="text-4xl font-black text-[#3D195B] uppercase tracking-tighter italic">THE RUN IN</h1>
+               </div>
+               <Badge className="bg-[#FF005A] text-white border-none px-6 py-2 rounded-full font-black uppercase text-sm tracking-widest">SEASON 2024/25</Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-12 flex-1">
+               {focusTeams.map((teamId, idx) => {
+                  const team = storeTeams.find(t => t.id === teamId);
+                  const upcoming = storeFixtures
+                    .filter(f => (f.homeTeamId === teamId || f.awayTeamId === teamId) && f.status === 'pending')
+                    .slice(0, 5);
+                  
+                  return (
+                    <div key={teamId} className="flex flex-col gap-6">
+                       <div className="flex items-center gap-4">
+                          <img src={team?.logo} className="w-14 h-14 object-contain" referrerPolicy="no-referrer" />
+                          <h2 className="text-3xl font-black text-[#3D195B] uppercase tracking-tighter">{team?.name}</h2>
+                       </div>
+                       
+                       <div className="flex-1 bg-white rounded-[2rem] border border-slate-200 shadow-xl p-8 space-y-4">
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex justify-between">
+                             <span>Upcoming Fixtures</span>
+                             <span>Difficulty</span>
+                          </div>
+                          
+                          {upcoming.map((f, i) => {
+                             const isHome = f.homeTeamId === teamId;
+                             const opponent = isHome ? storeTeams.find(t => t.id === f.awayTeamId) : storeTeams.find(t => t.id === f.homeTeamId);
+                             const diff = i % 3 === 0 ? 'CRITICAL' : i % 2 === 0 ? 'HARD' : 'EASY';
+                             
+                             return (
+                               <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 hover:bg-[#3D195B]/5 transition-colors group">
+                                  <div className="flex items-center gap-4">
+                                     <span className="text-xs font-black text-[#3D195B]/40 uppercase w-4">{isHome ? 'H' : 'A'}</span>
+                                     <img src={opponent?.logo} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+                                     <span className="text-lg font-black text-[#3D195B] uppercase tracking-tight group-hover:translate-x-1 transition-transform">{opponent?.name}</span>
+                                  </div>
+                                  <div className={cn(
+                                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                                    diff === 'CRITICAL' ? "bg-red-50 text-red-600 border-red-200" :
+                                    diff === 'HARD' ? "bg-orange-50 text-orange-600 border-orange-200" :
+                                    "bg-green-50 text-green-600 border-green-200"
+                                  )}>
+                                     {diff}
+                                  </div>
+                               </div>
+                             );
+                          })}
+
+                          {upcoming.length === 0 && (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-4">
+                               <Calendar className="w-12 h-12 opacity-20" />
+                               <p className="text-sm font-black uppercase tracking-widest">No scheduled fixtures</p>
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  );
+               })}
+            </div>
+
+            <div className="mt-8 flex items-center justify-between py-6 border-t border-slate-200">
+               <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Data based on Lumina Math Prediction Engine</div>
+               <div className="flex gap-4">
+                  <div className="flex items-center gap-2">
+                     <div className="w-3 h-3 rounded-full bg-red-500" />
+                     <span className="text-[10px] font-black text-[#3D195B]">CRITICAL (Top 4)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                     <div className="w-3 h-3 rounded-full bg-orange-500" />
+                     <span className="text-[10px] font-black text-[#3D195B]">HARD (Top 10)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                     <div className="w-3 h-3 rounded-full bg-green-500" />
+                     <span className="text-[10px] font-black text-[#3D195B]">EASY (Bottom 10)</span>
+                  </div>
+               </div>
+            </div>
+          </div>
+        );
+
       case 'pl-matchday':
         return (
           <div className="w-full h-full bg-pl-purple flex flex-col items-center p-12 relative overflow-hidden">
@@ -1010,7 +1457,15 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
               </div>
 
               {/* Round Selection */}
-              {(template.id === 'pl-fixtures' || template.id === 'pl-standings' || template.id === 'pl-top-six') && (
+              {(template.id === 'pl-fixtures' || 
+                template.id === 'pl-standings' || 
+                template.id === 'pl-top-six' || 
+                template.id === 'pl-round-schedule' || 
+                template.id === 'pl-power-form' ||
+                template.id === 'pl-standings-vertical' ||
+                template.id === 'pl-vs-modern' ||
+                template.id === 'pl-run-in-grid'
+               ) && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Select Matchweek</label>
                   <Select 
@@ -1114,9 +1569,10 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                 ref={posterRef}
                 className={cn(
                   "h-auto min-h-[540px] relative overflow-hidden",
-                  template.id === 'pl-full-table' ? "w-[1400px]" : 
-                  template.id === 'pl-fixtures' ? "w-[1000px]" : 
-                  template.id === 'pl-standings' ? "w-[1000px]" : "w-[700px]"
+                  template.id === 'pl-full-table' || template.id === 'pl-run-in-grid' ? "w-[1400px]" : 
+                  template.id === 'pl-fixtures' || template.id === 'pl-round-schedule' ? "w-[1000px]" : 
+                  template.id === 'pl-standings' || template.id === 'pl-standings-vertical' ? "w-[1000px]" : 
+                  template.id === 'pl-vs-modern' ? "w-[1000px]" : "w-[700px]"
                 )}
               >
                 {renderTemplate()}
