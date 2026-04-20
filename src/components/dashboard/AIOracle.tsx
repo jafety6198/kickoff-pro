@@ -17,7 +17,7 @@ export function AIOracle() {
   const exportRef = useRef<HTMLDivElement>(null);
 
   const groupedMatches = useMemo(() => {
-    const upcoming = fixtures.filter(f => f.status === 'pending');
+    const upcoming = fixtures.filter(f => f.leg1?.status === 'pending' || f.leg2?.status === 'pending');
     const groups: { [key: number]: Fixture[] } = {};
     
     upcoming.forEach(f => {
@@ -28,7 +28,7 @@ export function AIOracle() {
     return Object.entries(groups).sort(([a], [b]) => Number(a) - Number(b));
   }, [fixtures]);
 
-  const upcomingMatchesCount = fixtures.filter(f => f.status === 'pending').length;
+  const upcomingMatchesCount = fixtures.filter(f => f.leg1?.status === 'pending' || f.leg2?.status === 'pending').length;
 
   const handlePredict = async (fixture: Fixture) => {
     const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
@@ -56,7 +56,7 @@ export function AIOracle() {
   };
 
   const predictAll = async () => {
-    const upcoming = fixtures.filter(f => f.status === 'pending');
+    const upcoming = fixtures.filter(f => f.leg1?.status === 'pending' || f.leg2?.status === 'pending');
     const unpredicted = upcoming.filter(m => !m.prediction);
     if (unpredicted.length === 0) {
       toast.info('All upcoming matches already have predictions!');
@@ -283,7 +283,7 @@ export function AIOracle() {
           </div>
 
           <div className="grid grid-cols-2 gap-8">
-            {fixtures.filter(f => f.status === 'pending').slice(0, 10).map((fixture) => {
+            {fixtures.filter(f => f.leg1?.status === 'pending' || f.leg2?.status === 'pending').slice(0, 10).map((fixture) => {
               const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
               const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
               return (

@@ -40,7 +40,7 @@ interface FixtureCardProps {
   teams: Team[];
   fixtures: Fixture[];
   role: Role;
-  updateFixtureScore: (fixtureId: string, homeScore: number, awayScore: number) => void;
+  updateFixtureScore: (fixtureId: string, leg: 1 | 2, homeScore: number, awayScore: number) => void;
   updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   onTeamClick?: (team: Team) => void;
 }
@@ -52,6 +52,14 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
   const { tournamentName } = useStore();
   const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
   const awayTeam = teams.find(t => t.id === fixture.awayTeamId);
+
+  const status = useMemo(() => {
+    const l1Finished = fixture.leg1?.status === 'finished';
+    const l2Finished = fixture.leg2?.status === 'finished';
+    if (l1Finished && l2Finished) return 'completed';
+    if (l1Finished) return 'in-progress';
+    return 'pending';
+  }, [fixture.leg1?.status, fixture.leg2?.status]);
 
   const handlePredict = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,7 +96,7 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
     }
   };
 
-  const isFinished = fixture.status === 'finished';
+  const isFinished = fixture.leg1?.status === 'finished' && fixture.leg2?.status === 'finished';
 
   return (
     <>
@@ -96,17 +104,20 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
         layout
         onClick={handleClick}
         className={cn(
-          "relative overflow-hidden bg-white border rounded-2xl cursor-pointer group transition-all duration-500",
-          isFinished 
-            ? "border-green-500 shadow-lg shadow-green-500/10" 
-            : "border-slate-200",
+          "relative overflow-hidden border rounded-2xl cursor-pointer group transition-all duration-500",
+          status === 'completed' && "bg-green-50 border-green-500 shadow-lg shadow-green-500/10",
+          status === 'in-progress' && "bg-amber-50 border-amber-400 shadow-lg shadow-amber-500/10",
+          status === 'pending' && "bg-white border-slate-200",
           role === 'admin' 
             ? "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10" 
             : "hover:border-slate-400 hover:shadow-xl"
         )}
       >
         {/* Decorative Background Element */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700" />
+        <div className={cn(
+          "absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700",
+          status === 'completed' ? "bg-green-100/50" : status === 'in-progress' ? "bg-amber-100/50" : "bg-slate-50"
+        )} />
         
         <div className="relative p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -119,7 +130,7 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
                   }
                 }}
                 className={cn(
-                  "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 p-2.5 border border-slate-100 shadow-inner transition-transform duration-500",
+                  "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-white p-2.5 border border-slate-100 shadow-inner transition-transform duration-500",
                   role === 'admin' ? "team-link cursor-pointer hover:scale-110 hover:border-primary/30" : "group-hover:scale-110"
                 )}
               >
@@ -147,73 +158,39 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
               </div>
             </div>
             
-            {/* Score / VS Center */}
-            <div className="flex flex-col items-center justify-center gap-3 min-w-[140px]">
-              <div className="relative">
-                <div className={cn(
-                  "flex items-center justify-center gap-4 px-6 py-3 rounded-2xl font-black text-3xl italic tracking-tighter transition-all duration-500",
-                  fixture.status === 'finished' 
-                    ? "bg-slate-900 text-white shadow-xl shadow-slate-200" 
-                    : "bg-slate-100 text-slate-400 border border-slate-200"
-                )}>
-                  {fixture.status === 'finished' ? (
-                    <>
-                      <span>{fixture.homeScore}</span>
-                      <span className="text-slate-500 text-xl opacity-50">-</span>
-                      <span>{fixture.awayScore}</span>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <span className="text-xl tracking-[0.3em] ml-1">VS</span>
-                      {fixture.prediction && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="flex items-center gap-1.5 mt-1 bg-primary/10 px-2 py-0.5 rounded-lg"
-                        >
-                          <Sparkles className="w-2.5 h-2.5 text-primary" />
-                          <span className="text-[10px] font-black text-primary">
-                            {fixture.prediction.homeScore}-{fixture.prediction.awayScore}
-                          </span>
-                        </motion.div>
-                      )}
-                    </div>
-                  )}
+            {/* Leg Scores Center */}
+            <div className="flex flex-col items-center justify-center gap-2 min-w-[200px]">
+              <div className="flex items-center gap-3">
+                {/* Leg 1 */}
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Leg 1</span>
+                  <div className={cn(
+                    "px-4 py-2 rounded-xl flex items-center justify-center font-black text-xl italic min-w-[60px]",
+                    fixture.leg1?.status === 'finished' ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
+                  )}>
+                    {fixture.leg1?.status === 'finished' ? `${fixture.leg1?.homeScore}-${fixture.leg1?.awayScore}` : "20:00"}
+                  </div>
                 </div>
-                
-                {!isFinished && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handlePredict}
-                    disabled={predicting}
-                    className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white shadow-md border border-slate-100 text-slate-400 hover:text-primary z-10"
-                  >
-                    {predicting ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-3 h-3" />
-                    )}
-                  </Button>
-                )}
-                
-                {fixture.status === 'finished' && (
-                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm" />
-                )}
+
+                {/* Leg 2 */}
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Leg 2</span>
+                  <div className={cn(
+                    "px-4 py-2 rounded-xl flex items-center justify-center font-black text-xl italic min-w-[60px]",
+                    fixture.leg2?.status === 'finished' ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"
+                  )}>
+                    {fixture.leg2?.status === 'finished' ? `${fixture.leg2?.homeScore}-${fixture.leg2?.awayScore}` : "20:00"}
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col items-center">
                 <span className={cn(
-                  "text-[9px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full",
-                  fixture.status === 'finished' ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"
+                  "text-[8px] font-black uppercase tracking-[0.3em] px-3 py-1 rounded-full",
+                  status === 'completed' ? "bg-green-100 text-green-600" : status === 'in-progress' ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400"
                 )}>
-                  {fixture.status === 'finished' ? 'Full Time' : 'Upcoming'}
+                  {status === 'completed' ? 'Completed' : status === 'in-progress' ? 'In Progress' : 'Pending'}
                 </span>
-                {role === 'admin' && fixture.status === 'pending' && (
-                  <span className="text-[8px] font-black text-primary uppercase tracking-widest mt-2 animate-pulse">
-                    Update Result
-                  </span>
-                )}
               </div>
             </div>
 
@@ -299,24 +276,29 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
                       <Clock className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Status</p>
-                      <p className="text-[10px] font-black text-slate-700 uppercase">{fixture.status}</p>
+                      <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Aggregate</p>
+                      <p className="text-[10px] font-black text-slate-700 uppercase">
+                        {(fixture.leg1?.homeScore || 0) + (fixture.leg2?.homeScore || 0)} - {(fixture.leg1?.awayScore || 0) + (fixture.leg2?.awayScore || 0)}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {fixture.status === 'finished' && fixture.stats && (
+                {(fixture.leg1?.status === 'finished' || fixture.leg2?.status === 'finished') && (
                   <div className="space-y-3">
-                    <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Match Statistics</h6>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-600">
-                        <span>{fixture.stats.possession_home}%</span>
-                        <span className="uppercase tracking-widest opacity-50">Possession</span>
-                        <span>{fixture.stats.possession_away}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                        <div className="h-full bg-slate-900" style={{ width: `${fixture.stats.possession_home}%` }} />
-                        <div className="h-full bg-slate-300" style={{ width: `${fixture.stats.possession_away}%` }} />
+                    <h6 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Aggregate Statistics</h6>
+                    <div className="space-y-4">
+                      {/* Combined Possession */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-600">
+                          <span>{Math.round(((fixture.leg1?.stats?.possession_home || 50) + (fixture.leg2?.stats?.possession_away || 50)) / 2)}%</span>
+                          <span className="uppercase tracking-widest opacity-50">Possession</span>
+                          <span>{Math.round(((fixture.leg1?.stats?.possession_away || 50) + (fixture.leg2?.stats?.possession_home || 50)) / 2)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-slate-900" style={{ width: `${Math.round(((fixture.leg1?.stats?.possession_home || 50) + (fixture.leg2?.stats?.possession_away || 50)) / 2)}%` }} />
+                          <div className="h-full bg-slate-300" style={{ width: `${Math.round(((fixture.leg1?.stats?.possession_away || 50) + (fixture.leg2?.stats?.possession_home || 50)) / 2)}%` }} />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -365,7 +347,7 @@ export function Dashboard() {
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
   
   const isSeasonFinished = useMemo(() => {
-    return fixtures.length > 0 && fixtures.every(f => f.status === 'finished');
+    return fixtures.length > 0 && fixtures.every(f => f.leg1.status === 'finished' && f.leg2.status === 'finished');
   }, [fixtures]);
 
   const [showSeasonEnd, setShowSeasonEnd] = useState(false);

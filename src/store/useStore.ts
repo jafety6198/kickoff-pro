@@ -37,19 +37,10 @@ export interface Player {
   passes?: number;
 }
 
-export interface Fixture {
-  id: string;
-  homeTeamId: string;
-  awayTeamId: string;
+export interface FixtureLeg {
   homeScore: number | null;
   awayScore: number | null;
-  round: number;
   status: 'pending' | 'finished';
-  prediction?: {
-    homeScore: number;
-    awayScore: number;
-    reasoning?: string;
-  };
   stats?: {
     possession_home: number;
     possession_away: number;
@@ -77,6 +68,20 @@ export interface Fixture {
     tackles_away?: number;
     saves_home?: number;
     saves_away?: number;
+  };
+}
+
+export interface Fixture {
+  id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  leg1: FixtureLeg;
+  leg2: FixtureLeg;
+  round: number;
+  prediction?: {
+    homeScore: number;
+    awayScore: number;
+    reasoning?: string;
   };
 }
 
@@ -126,7 +131,7 @@ interface TournamentState {
   setTeams: (teams: Team[]) => void;
   setFixtures: (fixtures: Fixture[]) => void;
   setPlayers: (players: Player[]) => void;
-  updateFixtureScore: (fixtureId: string, homeScore: number, awayScore: number, stats?: Fixture['stats']) => void;
+  updateFixtureScore: (fixtureId: string, leg: 1 | 2, homeScore: number, awayScore: number, stats?: FixtureLeg['stats']) => void;
   updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   updateTeam: (teamId: string, updates: Partial<Team>) => void;
   updatePlayerStats: (playerId: string, updates: Partial<Player>) => void;
@@ -295,11 +300,17 @@ export const useStore = create<TournamentState>()(
         get().saveProfile();
       },
       
-      updateFixtureScore: (fixtureId, homeScore, awayScore, stats) => {
+      updateFixtureScore: (fixtureId, leg, homeScore, awayScore, stats) => {
         set((state) => {
-          const updatedFixtures = state.fixtures.map((f) => 
-            f.id === fixtureId ? { ...f, homeScore, awayScore, stats, status: 'finished' as const } : f
-          );
+          const updatedFixtures = state.fixtures.map((f) => {
+            if (f.id === fixtureId) {
+              const legData: FixtureLeg = { homeScore, awayScore, stats, status: 'finished' as const };
+              return leg === 1 
+                ? { ...f, leg1: legData } 
+                : { ...f, leg2: legData };
+            }
+            return f;
+          });
           return { fixtures: updatedFixtures };
         });
         get().saveProfile();
@@ -346,6 +357,42 @@ export const useStore = create<TournamentState>()(
     }),
     {
       name: 'kickoff-storage',
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        if (version < 2) {
+          const migrateFixtures = (fixtures: any[]) => {
+            if (!fixtures || !Array.isArray(fixtures)) return [];
+            return fixtures.map((f: any) => {
+              if (f.leg1) return f;
+              return {
+                ...f,
+                leg1: {
+                  homeScore: f.homeScore !== undefined ? f.homeScore : null,
+                  awayScore: f.awayScore !== undefined ? f.awayScore : null,
+                  status: f.status === 'finished' ? 'finished' : 'pending',
+                  stats: f.stats
+                },
+                leg2: {
+                  homeScore: null,
+                  awayScore: null,
+                  status: 'pending'
+                }
+              };
+            });
+          };
+
+          if (persistedState.fixtures) {
+            persistedState.fixtures = migrateFixtures(persistedState.fixtures);
+          }
+          if (persistedState.profiles) {
+            persistedState.profiles = persistedState.profiles.map((p: any) => ({
+              ...p,
+              fixtures: migrateFixtures(p.fixtures)
+            }));
+          }
+        }
+        return persistedState;
+      }
     }
   )
 );

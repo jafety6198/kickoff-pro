@@ -141,42 +141,52 @@ export function StatsDashboard() {
       let tackles = 0;
 
       fixtures.forEach(f => {
-        if (f.status === 'finished') {
-          if (f.homeTeamId === team.id) {
-            goals += f.homeScore || 0;
-            passes += f.stats?.passes_home || 0;
-            saves += f.stats?.saves_home || 0;
-            shots += f.stats?.shots_home || 0;
-            shotsOnTarget += f.stats?.shots_on_target_home || 0;
-            fouls += f.stats?.fouls_home || 0;
-            corners += f.stats?.corners_home || 0;
-            freeKicks += f.stats?.free_kicks_home || 0;
-            successfulPasses += f.stats?.successful_passes_home || 0;
-            crosses += f.stats?.crosses_home || 0;
-            interceptions += f.stats?.interceptions_home || 0;
-            tackles += f.stats?.tackles_home || 0;
-            if (f.stats?.possession_home) {
-              possessionTotal += f.stats.possession_home;
-              possessionCount++;
-            }
-          } else if (f.awayTeamId === team.id) {
-            goals += f.awayScore || 0;
-            passes += f.stats?.passes_away || 0;
-            saves += f.stats?.saves_away || 0;
-            shots += f.stats?.shots_away || 0;
-            shotsOnTarget += f.stats?.shots_on_target_away || 0;
-            fouls += f.stats?.fouls_away || 0;
-            corners += f.stats?.corners_away || 0;
-            freeKicks += f.stats?.free_kicks_away || 0;
-            successfulPasses += f.stats?.successful_passes_away || 0;
-            crosses += f.stats?.crosses_away || 0;
-            interceptions += f.stats?.interceptions_away || 0;
-            tackles += f.stats?.tackles_away || 0;
-            if (f.stats?.possession_away) {
-              possessionTotal += f.stats.possession_away;
-              possessionCount++;
+        const processLeg = (leg: any, isHome: boolean) => {
+          if (leg?.status === 'finished') {
+            if (isHome) {
+              goals += leg.homeScore || 0;
+              passes += leg.stats?.passes_home || 0;
+              saves += leg.stats?.saves_home || 0;
+              shots += leg.stats?.shots_home || 0;
+              shotsOnTarget += leg.stats?.shots_on_target_home || 0;
+              fouls += leg.stats?.fouls_home || 0;
+              corners += leg.stats?.corners_home || 0;
+              freeKicks += leg.stats?.free_kicks_home || 0;
+              successfulPasses += leg.stats?.successful_passes_home || 0;
+              crosses += leg.stats?.crosses_home || 0;
+              interceptions += leg.stats?.interceptions_home || 0;
+              tackles += leg.stats?.tackles_home || 0;
+              if (leg.stats?.possession_home) {
+                possessionTotal += leg.stats.possession_home;
+                possessionCount++;
+              }
+            } else {
+              goals += leg.awayScore || 0;
+              passes += leg.stats?.passes_away || 0;
+              saves += leg.stats?.saves_away || 0;
+              shots += leg.stats?.shots_away || 0;
+              shotsOnTarget += leg.stats?.shots_on_target_away || 0;
+              fouls += leg.stats?.fouls_away || 0;
+              corners += leg.stats?.corners_away || 0;
+              freeKicks += leg.stats?.free_kicks_away || 0;
+              successfulPasses += leg.stats?.successful_passes_away || 0;
+              crosses += leg.stats?.crosses_away || 0;
+              interceptions += leg.stats?.interceptions_away || 0;
+              tackles += leg.stats?.tackles_away || 0;
+              if (leg.stats?.possession_away) {
+                possessionTotal += leg.stats.possession_away;
+                possessionCount++;
+              }
             }
           }
+        };
+
+        if (f.homeTeamId === team.id) {
+          processLeg(f.leg1, true); // Home in Leg 1
+          processLeg(f.leg2, false); // Away in Leg 2
+        } else if (f.awayTeamId === team.id) {
+          processLeg(f.leg1, false); // Away in Leg 1
+          processLeg(f.leg2, true); // Home in Leg 2
         }
       });
 
@@ -212,47 +222,68 @@ export function StatsDashboard() {
 
   const teamForm = useMemo(() => {
     return teams.map(team => {
+      const form: string[] = [];
       const teamFixtures = fixtures
-        .filter(f => f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id))
-        .sort((a, b) => b.round - a.round)
-        .slice(0, 5);
+        .filter(f => (f.leg1?.status === 'finished' || f.leg2?.status === 'finished') && (f.homeTeamId === team.id || f.awayTeamId === team.id))
+        .sort((a, b) => b.round - a.round);
 
-      const form = teamFixtures.map(f => {
-        const isHome = f.homeTeamId === team.id;
-        const score = isHome ? f.homeScore! : f.awayScore!;
-        const oppScore = isHome ? f.awayScore! : f.homeScore!;
+      teamFixtures.forEach(f => {
+        const isHomeTeam = f.homeTeamId === team.id;
         
-        if (score > oppScore) return 'W';
-        if (score < oppScore) return 'L';
-        return 'D';
-      }).reverse();
+        // Check Leg 1
+        if (f.leg1?.status === 'finished') {
+          const score = isHomeTeam ? f.leg1.homeScore! : f.leg1.awayScore!;
+          const oppScore = isHomeTeam ? f.leg1.awayScore! : f.leg1.homeScore!;
+          if (score > oppScore) form.push('W');
+          else if (score < oppScore) form.push('L');
+          else form.push('D');
+        }
+        
+        // Check Leg 2
+        if (f.leg2?.status === 'finished') {
+          // Home/Away roles swap in Leg 2
+          const score = isHomeTeam ? f.leg2.awayScore! : f.leg2.homeScore!;
+          const oppScore = isHomeTeam ? f.leg2.homeScore! : f.leg2.awayScore!;
+          if (score > oppScore) form.push('W');
+          else if (score < oppScore) form.push('L');
+          else form.push('D');
+        }
+      });
 
-      return { ...team, form };
+      return { ...team, form: form.slice(0, 5).reverse() };
     });
   }, [teams, fixtures]);
 
   const tournamentStats = useMemo(() => {
-    const finishedFixtures = fixtures.filter(f => f.status === 'finished');
-    
     let highestScore = { value: 0, team: '', match: '' };
     let totalYellowCards = players.reduce((sum, p) => sum + p.yellowCards, 0);
     let totalRedCards = players.reduce((sum, p) => sum + p.redCards, 0);
 
-    finishedFixtures.forEach(f => {
-      if (f.homeScore! > highestScore.value) {
-        highestScore = { 
-          value: f.homeScore!, 
-          team: teams.find(t => t.id === f.homeTeamId)?.handleName || teams.find(t => t.id === f.homeTeamId)?.name || '',
-          match: `${teams.find(t => t.id === f.homeTeamId)?.name} vs ${teams.find(t => t.id === f.awayTeamId)?.name}`
-        };
-      }
-      if (f.awayScore! > highestScore.value) {
-        highestScore = { 
-          value: f.awayScore!, 
-          team: teams.find(t => t.id === f.awayTeamId)?.handleName || teams.find(t => t.id === f.awayTeamId)?.name || '',
-          match: `${teams.find(t => t.id === f.homeTeamId)?.name} vs ${teams.find(t => t.id === f.awayTeamId)?.name}`
-        };
-      }
+    fixtures.forEach(f => {
+      const processLeg = (leg: any, legNum: number) => {
+        if (leg?.status === 'finished') {
+          const hTeam = teams.find(t => t.id === (legNum === 1 ? f.homeTeamId : f.awayTeamId))?.name || '';
+          const aTeam = teams.find(t => t.id === (legNum === 1 ? f.awayTeamId : f.homeTeamId))?.name || '';
+          
+          if (leg.homeScore! > highestScore.value) {
+            highestScore = { 
+              value: leg.homeScore!, 
+              team: hTeam,
+              match: `${hTeam} vs ${aTeam} (Leg ${legNum})`
+            };
+          }
+          if (leg.awayScore! > highestScore.value) {
+            highestScore = { 
+              value: leg.awayScore!, 
+              team: aTeam,
+              match: `${hTeam} vs ${aTeam} (Leg ${legNum})`
+            };
+          }
+        }
+      };
+
+      processLeg(f.leg1, 1);
+      processLeg(f.leg2, 2);
     });
 
     const mostPassesTeam = [...teamStats].sort((a, b) => b.totalPasses - a.totalPasses)[0];
@@ -278,7 +309,7 @@ export function StatsDashboard() {
         {[
           { label: 'Season Goals', value: teamStats.reduce((acc, t) => acc + t.totalGoals, 0), icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
           { label: 'Total Passes', value: teamStats.reduce((acc, t) => acc + t.totalPasses, 0).toLocaleString(), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Matches Played', value: fixtures.filter(f => f.status === 'finished').length, icon: Activity, color: 'text-purple-500', bg: 'bg-purple-50' },
+          { label: 'Matches Played', value: fixtures.reduce((acc, f) => acc + (f.leg1?.status === 'finished' ? 1 : 0) + (f.leg2?.status === 'finished' ? 1 : 0), 0), icon: Activity, color: 'text-purple-500', bg: 'bg-purple-50' },
           { label: 'Avg Attendance', value: '42.5K', icon: Users, color: 'text-amber-500', bg: 'bg-amber-50' },
         ].map((stat, i) => (
           <motion.div 

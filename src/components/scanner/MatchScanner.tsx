@@ -87,7 +87,7 @@ export function MatchScanner() {
       const fixture = fixtures.find(f => 
         ((f.homeTeamId === homeTeam.id && f.awayTeamId === awayTeam.id) || 
          (f.homeTeamId === awayTeam.id && f.awayTeamId === homeTeam.id)) &&
-        f.status === 'pending'
+        (f.leg1.status === 'pending' || f.leg2.status === 'pending')
       );
 
       if (!fixture) {
@@ -95,40 +95,48 @@ export function MatchScanner() {
         return;
       }
 
+      // Determine which leg to update (Leg 1 first, then Leg 2)
+      const legToUpdate = fixture.leg1.status === 'pending' ? 1 : 2;
+
       // Determine which score goes where based on home/away assignment in fixture
-      const homeScore = fixture.homeTeamId === homeTeam.id ? result.score_home : result.score_away;
-      const awayScore = fixture.homeTeamId === homeTeam.id ? result.score_away : result.score_home;
+      // Remember that roles swap in Leg 2
+      const isHomeInLeg = legToUpdate === 1 
+        ? fixture.homeTeamId === homeTeam.id 
+        : fixture.awayTeamId === homeTeam.id; // Swapped in Leg 2
+
+      const homeScore = isHomeInLeg ? result.score_home : result.score_away;
+      const awayScore = isHomeInLeg ? result.score_away : result.score_home;
 
       const stats: any = {
-        possession_home: fixture.homeTeamId === homeTeam.id ? result.possession_home : result.possession_away,
-        possession_away: fixture.homeTeamId === homeTeam.id ? result.possession_away : result.possession_home,
-        shots_home: fixture.homeTeamId === homeTeam.id ? result.shots_home : result.shots_away,
-        shots_away: fixture.homeTeamId === homeTeam.id ? result.shots_away : result.shots_home,
-        shots_on_target_home: fixture.homeTeamId === homeTeam.id ? result.shots_on_target_home : result.shots_on_target_away,
-        shots_on_target_away: fixture.homeTeamId === homeTeam.id ? result.shots_on_target_away : result.shots_on_target_home,
-        passes_home: fixture.homeTeamId === homeTeam.id ? result.passes_home : result.passes_away,
-        passes_away: fixture.homeTeamId === homeTeam.id ? result.passes_away : result.passes_home,
-        successful_passes_home: fixture.homeTeamId === homeTeam.id ? result.successful_passes_home : result.successful_passes_away,
-        successful_passes_away: fixture.homeTeamId === homeTeam.id ? result.successful_passes_away : result.successful_passes_home,
-        fouls_home: fixture.homeTeamId === homeTeam.id ? result.fouls_home : result.fouls_away,
-        fouls_away: fixture.homeTeamId === homeTeam.id ? result.fouls_away : result.fouls_home,
-        offsides_home: fixture.homeTeamId === homeTeam.id ? result.offsides_home : result.offsides_away,
-        offsides_away: fixture.homeTeamId === homeTeam.id ? result.offsides_away : result.offsides_home,
-        corners_home: fixture.homeTeamId === homeTeam.id ? result.corners_home : result.corners_away,
-        corners_away: fixture.homeTeamId === homeTeam.id ? result.corners_away : result.corners_home,
-        free_kicks_home: fixture.homeTeamId === homeTeam.id ? result.free_kicks_home : result.free_kicks_away,
-        free_kicks_away: fixture.homeTeamId === homeTeam.id ? result.free_kicks_away : result.free_kicks_home,
-        crosses_home: fixture.homeTeamId === homeTeam.id ? result.crosses_home : result.crosses_away,
-        crosses_away: fixture.homeTeamId === homeTeam.id ? result.crosses_away : result.crosses_home,
-        interceptions_home: fixture.homeTeamId === homeTeam.id ? result.interceptions_home : result.interceptions_away,
-        interceptions_away: fixture.homeTeamId === homeTeam.id ? result.interceptions_away : result.interceptions_home,
-        tackles_home: fixture.homeTeamId === homeTeam.id ? result.tackles_home : result.tackles_away,
-        tackles_away: fixture.homeTeamId === homeTeam.id ? result.tackles_away : result.tackles_home,
-        saves_home: fixture.homeTeamId === homeTeam.id ? result.saves_home : result.saves_away,
-        saves_away: fixture.homeTeamId === homeTeam.id ? result.saves_away : result.saves_home,
+        possession_home: isHomeInLeg ? result.possession_home : result.possession_away,
+        possession_away: isHomeInLeg ? result.possession_away : result.possession_home,
+        shots_home: isHomeInLeg ? result.shots_home : result.shots_away,
+        shots_away: isHomeInLeg ? result.shots_away : result.shots_home,
+        shots_on_target_home: isHomeInLeg ? result.shots_on_target_home : result.shots_on_target_away,
+        shots_on_target_away: isHomeInLeg ? result.shots_on_target_away : result.shots_on_target_home,
+        passes_home: isHomeInLeg ? result.passes_home : result.passes_away,
+        passes_away: isHomeInLeg ? result.passes_away : result.passes_home,
+        successful_passes_home: isHomeInLeg ? result.successful_passes_home : result.successful_passes_away,
+        successful_passes_away: isHomeInLeg ? result.successful_passes_away : result.successful_passes_home,
+        fouls_home: isHomeInLeg ? result.fouls_home : result.fouls_away,
+        fouls_away: isHomeInLeg ? result.fouls_away : result.fouls_home,
+        offsides_home: isHomeInLeg ? result.offsides_home : result.offsides_away,
+        offsides_away: isHomeInLeg ? result.offsides_away : result.offsides_home,
+        corners_home: isHomeInLeg ? result.corners_home : result.corners_away,
+        corners_away: isHomeInLeg ? result.corners_away : result.corners_home,
+        free_kicks_home: isHomeInLeg ? result.free_kicks_home : result.free_kicks_away,
+        free_kicks_away: isHomeInLeg ? result.free_kicks_away : result.free_kicks_home,
+        crosses_home: isHomeInLeg ? result.crosses_home : result.crosses_away,
+        crosses_away: isHomeInLeg ? result.crosses_away : result.crosses_home,
+        interceptions_home: isHomeInLeg ? result.interceptions_home : result.interceptions_away,
+        interceptions_away: isHomeInLeg ? result.interceptions_away : result.interceptions_home,
+        tackles_home: isHomeInLeg ? result.tackles_home : result.tackles_away,
+        tackles_away: isHomeInLeg ? result.tackles_away : result.tackles_home,
+        saves_home: isHomeInLeg ? result.saves_home : result.saves_away,
+        saves_away: isHomeInLeg ? result.saves_away : result.saves_home,
       };
 
-      updateFixtureScore(fixture.id, homeScore, awayScore, stats);
+      updateFixtureScore(fixture.id, legToUpdate, homeScore, awayScore, stats);
 
       // Update player goals
       result.scorers.forEach(scorer => {

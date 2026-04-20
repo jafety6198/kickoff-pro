@@ -26,10 +26,9 @@ export function generateRoundRobinFixtures(teams: Team[]): Fixture[] {
           id: `${round}-${home}-${away}`,
           homeTeamId: home,
           awayTeamId: away,
-          homeScore: null,
-          awayScore: null,
-          round: round + 1,
-          status: 'pending'
+          leg1: { homeScore: null, awayScore: null, status: 'pending' },
+          leg2: { homeScore: null, awayScore: null, status: 'pending' },
+          round: round + 1
         });
       }
     }
@@ -68,43 +67,58 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
   });
 
   // Process finished fixtures
-  sortedFixtures.filter(f => f.status === 'finished').forEach(f => {
-    const home = standingsMap.get(f.homeTeamId);
-    const away = standingsMap.get(f.awayTeamId);
-    
-    if (home && away && f.homeScore !== null && f.awayScore !== null) {
-      home.played += 1;
-      away.played += 1;
-      home.gf += f.homeScore;
-      home.ga += f.awayScore;
-      away.gf += f.awayScore;
-      away.ga += f.homeScore;
-      
-      if (f.homeScore > f.awayScore) {
-        home.won += 1;
-        home.pts += 3;
-        home.form?.push('W');
-        away.lost += 1;
-        away.form?.push('L');
-      } else if (f.homeScore < f.awayScore) {
-        away.won += 1;
-        away.pts += 3;
-        away.form?.push('W');
-        home.lost += 1;
-        home.form?.push('L');
-      } else {
-        home.drawn += 1;
-        away.drawn += 1;
-        home.pts += 1;
-        home.form?.push('D');
-        away.pts += 1;
-        away.form?.push('D');
-      }
-      
-      home.gd = home.gf - home.ga;
-      away.gd = away.gf - away.ga;
+  sortedFixtures.forEach(f => {
+    // Check Leg 1
+    if (f.leg1.status === 'finished' && f.leg1.homeScore !== null && f.leg1.awayScore !== null) {
+      updateStats(f.homeTeamId, f.awayTeamId, f.leg1.homeScore, f.leg1.awayScore);
+    }
+    // Check Leg 2
+    if (f.leg2.status === 'finished' && f.leg2.homeScore !== null && f.leg2.awayScore !== null) {
+      // In Leg 2, roles are reversed for stadium/home advantage usually, 
+      // but the data structure says homeTeamId/awayTeamId for the FIXTURE.
+      // We assume Leg 2 is played at the original Away Team's stadium.
+      // So homeScore in Leg 2 belongs to the original Away Team.
+      updateStats(f.awayTeamId, f.homeTeamId, f.leg2.homeScore, f.leg2.awayScore);
     }
   });
+
+  function updateStats(team1Id: string, team2Id: string, score1: number, score2: number) {
+    const team1 = standingsMap.get(team1Id);
+    const team2 = standingsMap.get(team2Id);
+    
+    if (team1 && team2) {
+      team1.played += 1;
+      team2.played += 1;
+      team1.gf += score1;
+      team1.ga += score2;
+      team2.gf += score2;
+      team2.ga += score1;
+      
+      if (score1 > score2) {
+        team1.won += 1;
+        team1.pts += 3;
+        team1.form?.push('W');
+        team2.lost += 1;
+        team2.form?.push('L');
+      } else if (score1 < score2) {
+        team2.won += 1;
+        team2.pts += 3;
+        team2.form?.push('W');
+        team1.lost += 1;
+        team1.form?.push('L');
+      } else {
+        team1.drawn += 1;
+        team2.drawn += 1;
+        team1.pts += 1;
+        team1.form?.push('D');
+        team2.pts += 1;
+        team2.form?.push('D');
+      }
+      
+      team1.gd = team1.gf - team1.ga;
+      team2.gd = team2.gf - team2.ga;
+    }
+  }
 
   // Keep only the last 5 results for form
   standingsMap.forEach(team => {

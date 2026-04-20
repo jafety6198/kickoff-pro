@@ -55,8 +55,14 @@ export function ProfileSelector() {
 
   const calculateProgress = (profile: Profile) => {
     if (!profile.fixtures || profile.fixtures.length === 0) return 0;
-    const finished = profile.fixtures.filter(f => f.status === 'finished').length;
-    return Math.round((finished / profile.fixtures.length) * 100);
+    const totalLegs = profile.fixtures.length * 2;
+    const finishedLegs = profile.fixtures.reduce((acc, f) => {
+      let count = 0;
+      if (f.leg1.status === 'finished') count++;
+      if (f.leg2.status === 'finished') count++;
+      return acc + count;
+    }, 0);
+    return Math.round((finishedLegs / totalLegs) * 100);
   };
 
   const handleRename = () => {

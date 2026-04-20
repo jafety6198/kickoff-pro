@@ -12,6 +12,7 @@ import { useStore, Fixture } from '@/store/useStore';
 import { Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface MatchManagementModalProps {
   fixture: Fixture;
@@ -21,34 +22,41 @@ interface MatchManagementModalProps {
 
 export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManagementModalProps) {
   const { teams, updateFixtureScore } = useStore();
-  const [homeScore, setHomeScore] = useState<string>(fixture.homeScore?.toString() || '');
-  const [awayScore, setAwayScore] = useState<string>(fixture.awayScore?.toString() || '');
   
+  const [l1Home, setL1Home] = useState<string>(fixture.leg1.homeScore?.toString() || '');
+  const [l1Away, setL1Away] = useState<string>(fixture.leg1.awayScore?.toString() || '');
+  const [l2Home, setL2Home] = useState<string>(fixture.leg2.homeScore?.toString() || '');
+  const [l2Away, setL2Away] = useState<string>(fixture.leg2.awayScore?.toString() || '');
+  
+  const [activeLeg, setActiveLeg] = useState<1 | 2>(fixture.leg1.status === 'pending' ? 1 : 2);
+  
+  const currentLegData = activeLeg === 1 ? fixture.leg1 : fixture.leg2;
+
   const [stats, setStats] = useState({
-    possession_home: fixture.stats?.possession_home?.toString() || '',
-    possession_away: fixture.stats?.possession_away?.toString() || '',
-    shots_home: fixture.stats?.shots_home?.toString() || '',
-    shots_away: fixture.stats?.shots_away?.toString() || '',
-    shots_on_target_home: fixture.stats?.shots_on_target_home?.toString() || '',
-    shots_on_target_away: fixture.stats?.shots_on_target_away?.toString() || '',
-    fouls_home: fixture.stats?.fouls_home?.toString() || '',
-    fouls_away: fixture.stats?.fouls_away?.toString() || '',
-    corners_home: fixture.stats?.corners_home?.toString() || '',
-    corners_away: fixture.stats?.corners_away?.toString() || '',
-    free_kicks_home: fixture.stats?.free_kicks_home?.toString() || '',
-    free_kicks_away: fixture.stats?.free_kicks_away?.toString() || '',
-    passes_home: fixture.stats?.passes_home?.toString() || '',
-    passes_away: fixture.stats?.passes_away?.toString() || '',
-    successful_passes_home: fixture.stats?.successful_passes_home?.toString() || '',
-    successful_passes_away: fixture.stats?.successful_passes_away?.toString() || '',
-    crosses_home: fixture.stats?.crosses_home?.toString() || '',
-    crosses_away: fixture.stats?.crosses_away?.toString() || '',
-    interceptions_home: fixture.stats?.interceptions_home?.toString() || '',
-    interceptions_away: fixture.stats?.interceptions_away?.toString() || '',
-    tackles_home: fixture.stats?.tackles_home?.toString() || '',
-    tackles_away: fixture.stats?.tackles_away?.toString() || '',
-    saves_home: fixture.stats?.saves_home?.toString() || '',
-    saves_away: fixture.stats?.saves_away?.toString() || '',
+    possession_home: currentLegData.stats?.possession_home?.toString() || '',
+    possession_away: currentLegData.stats?.possession_away?.toString() || '',
+    shots_home: currentLegData.stats?.shots_home?.toString() || '',
+    shots_away: currentLegData.stats?.shots_away?.toString() || '',
+    shots_on_target_home: currentLegData.stats?.shots_on_target_home?.toString() || '',
+    shots_on_target_away: currentLegData.stats?.shots_on_target_away?.toString() || '',
+    fouls_home: currentLegData.stats?.fouls_home?.toString() || '',
+    fouls_away: currentLegData.stats?.fouls_away?.toString() || '',
+    corners_home: currentLegData.stats?.corners_home?.toString() || '',
+    corners_away: currentLegData.stats?.corners_away?.toString() || '',
+    free_kicks_home: currentLegData.stats?.free_kicks_home?.toString() || '',
+    free_kicks_away: currentLegData.stats?.free_kicks_away?.toString() || '',
+    passes_home: currentLegData.stats?.passes_home?.toString() || '',
+    passes_away: currentLegData.stats?.passes_away?.toString() || '',
+    successful_passes_home: currentLegData.stats?.successful_passes_home?.toString() || '',
+    successful_passes_away: currentLegData.stats?.successful_passes_away?.toString() || '',
+    crosses_home: currentLegData.stats?.crosses_home?.toString() || '',
+    crosses_away: currentLegData.stats?.crosses_away?.toString() || '',
+    interceptions_home: currentLegData.stats?.interceptions_home?.toString() || '',
+    interceptions_away: currentLegData.stats?.interceptions_away?.toString() || '',
+    tackles_home: currentLegData.stats?.tackles_home?.toString() || '',
+    tackles_away: currentLegData.stats?.tackles_away?.toString() || '',
+    saves_home: currentLegData.stats?.saves_home?.toString() || '',
+    saves_away: currentLegData.stats?.saves_away?.toString() || '',
   });
 
   const homeTeam = teams.find(t => t.id === fixture.homeTeamId);
@@ -59,13 +67,11 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
   };
 
   const handleSave = () => {
-    const h = parseInt(homeScore);
-    const a = parseInt(awayScore);
-    if (isNaN(h) || isNaN(a)) {
-      toast.error('Please enter valid scores');
-      return;
-    }
-    
+    const h1 = parseInt(l1Home);
+    const a1 = parseInt(l1Away);
+    const h2 = parseInt(l2Home);
+    const a2 = parseInt(l2Away);
+
     const parsedStats = {
       possession_home: parseInt(stats.possession_home) || 0,
       possession_away: parseInt(stats.possession_away) || 0,
@@ -93,8 +99,15 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
       saves_away: parseInt(stats.saves_away) || 0,
     };
 
-    updateFixtureScore(fixture.id, h, a, parsedStats);
-    toast.success('Match result updated!');
+    if (!isNaN(h1) && !isNaN(a1)) {
+      updateFixtureScore(fixture.id, 1, h1, a1, activeLeg === 1 ? parsedStats : fixture.leg1.stats);
+    }
+    
+    if (!isNaN(h2) && !isNaN(a2)) {
+      updateFixtureScore(fixture.id, 2, h2, a2, activeLeg === 2 ? parsedStats : fixture.leg2.stats);
+    }
+
+    toast.success('Match results updated!');
     onClose();
   };
 
@@ -134,42 +147,102 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-8">
-            {/* Score Display Area */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 flex flex-col items-center text-center space-y-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white border border-slate-100 p-3 shadow-sm">
-                  <img src={homeTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+          <div className="space-y-10">
+            {/* Score Entry Area */}
+            <div className="space-y-6">
+              {/* Leg 1 */}
+              <div className={cn(
+                "p-6 rounded-[32px] border transition-all space-y-4 cursor-pointer",
+                activeLeg === 1 ? "bg-white border-primary/20 shadow-md ring-2 ring-primary/5" : "bg-white/50 border-slate-100 opacity-60"
+              )}
+              onClick={() => setActiveLeg(1)}
+              >
+                <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leg 1 • Home Match</span>
+                  {activeLeg === 1 && <Badge className="bg-primary text-white border-none text-[8px] font-black uppercase tracking-tighter shadow-sm">Recording Statistics</Badge>}
                 </div>
-                <p className="font-black text-slate-900 uppercase tracking-tighter text-sm sm:text-base truncate w-full">{homeTeam?.name}</p>
-                <Input 
-                  type="number" 
-                  value={homeScore}
-                  onChange={(e) => setHomeScore(e.target.value)}
-                  className="w-16 h-16 sm:w-20 sm:h-20 text-center text-3xl font-black rounded-3xl bg-white border-slate-200 focus:ring-primary/20"
-                  placeholder="-"
-                />
+                
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <img src={homeTeam?.logo} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                    <span className="text-[10px] font-bold text-slate-900 uppercase truncate w-full text-center">{homeTeam?.name}</span>
+                    <Input 
+                      type="number" 
+                      value={l1Home}
+                      onChange={(e) => setL1Home(e.target.value)}
+                      className="w-16 h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-none focus:ring-primary/20"
+                      placeholder="-"
+                    />
+                  </div>
+                  <div className="text-xl font-black text-slate-200 italic">VS</div>
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <img src={awayTeam?.logo} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                    <span className="text-[10px] font-bold text-slate-900 uppercase truncate w-full text-center">{awayTeam?.name}</span>
+                    <Input 
+                      type="number" 
+                      value={l1Away}
+                      onChange={(e) => setL1Away(e.target.value)}
+                      className="w-16 h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-none focus:ring-primary/20"
+                      placeholder="-"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="text-2xl font-black text-slate-200 italic pt-12">VS</div>
-
-              <div className="flex-1 flex flex-col items-center text-center space-y-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white border border-slate-100 p-3 shadow-sm">
-                  <img src={awayTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              {/* Leg 2 */}
+              <div className={cn(
+                "p-6 rounded-[32px] border transition-all space-y-4 cursor-pointer",
+                activeLeg === 2 ? "bg-white border-primary/20 shadow-md ring-2 ring-primary/5" : "bg-white/50 border-slate-100 opacity-60"
+              )}
+              onClick={() => setActiveLeg(2)}
+              >
+                <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leg 2 • Away Match</span>
+                  {activeLeg === 2 && <Badge className="bg-primary text-white border-none text-[8px] font-black uppercase tracking-tighter shadow-sm">Recording Statistics</Badge>}
                 </div>
-                <p className="font-black text-slate-900 uppercase tracking-tighter text-sm sm:text-base truncate w-full">{awayTeam?.name}</p>
-                <Input 
-                  type="number" 
-                  value={awayScore}
-                  onChange={(e) => setAwayScore(e.target.value)}
-                  className="w-16 h-16 sm:w-20 sm:h-20 text-center text-3xl font-black rounded-3xl bg-white border-slate-200 focus:ring-primary/20"
-                  placeholder="-"
-                />
+                
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <img src={awayTeam?.logo} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                    <span className="text-[10px] font-bold text-slate-900 uppercase truncate w-full text-center">{awayTeam?.name}</span>
+                    <Input 
+                      type="number" 
+                      value={l2Home}
+                      onChange={(e) => setL2Home(e.target.value)}
+                      className="w-16 h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-none focus:ring-primary/20"
+                      placeholder="-"
+                    />
+                  </div>
+                  <div className="text-xl font-black text-slate-200 italic">VS</div>
+                  <div className="flex-1 flex flex-col items-center gap-2">
+                    <img src={homeTeam?.logo} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
+                    <span className="text-[10px] font-bold text-slate-900 uppercase truncate w-full text-center">{homeTeam?.name}</span>
+                    <Input 
+                      type="number" 
+                      value={l2Away}
+                      onChange={(e) => setL2Away(e.target.value)}
+                      className="w-16 h-16 text-center text-2xl font-black rounded-2xl bg-slate-50 border-none focus:ring-primary/20"
+                      placeholder="-"
+                    />
+                  </div>
+                </div>
               </div>
+
+              {/* Aggregate Score Display */}
+              {(l1Home || l1Away || l2Home || l2Away) && (
+                <div className="text-center">
+                  <div className="inline-block px-6 py-2 rounded-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-[0.2em] italic">
+                    Aggregate: {parseInt(l1Home || '0') + parseInt(l2Away || '0')} - {parseInt(l1Away || '0') + parseInt(l2Home || '0')}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2">Match Statistics</h4>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">Match Statistics</h4>
+                <span className="text-[10px] font-bold text-primary uppercase">Managing Leg {activeLeg}</span>
+              </div>
               
               {statFields.map((field) => (
                 <div key={field.label} className="flex items-center justify-between gap-4">

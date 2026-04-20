@@ -13,27 +13,32 @@ export function calculateLocalPrediction(
 ): PredictionResult {
   // Helper to get historical stats
   const getHistoricalStats = (teamId: string) => {
-    const relevant = fixtures
-      .filter(f => f.status === 'finished' && (f.homeTeamId === teamId || f.awayTeamId === teamId))
-      .sort((a, b) => b.round - a.round)
-      .slice(0, 5);
-    
-    if (relevant.length === 0) return { shots: 8, passes: 350, passAccuracy: 75 };
+    const relevantLegs: any[] = [];
+    fixtures.forEach(f => {
+      const isHomeTeam = f.homeTeamId === teamId;
+      if (f.homeTeamId === teamId || f.awayTeamId === teamId) {
+        if (f.leg1?.status === 'finished') relevantLegs.push({ stats: f.leg1.stats, isHome: isHomeTeam, round: f.round });
+        if (f.leg2?.status === 'finished') relevantLegs.push({ stats: f.leg2.stats, isHome: !isHomeTeam, round: f.round }); // Swapped in leg 2
+      }
+    });
 
-    const totals = relevant.reduce((acc, f) => {
-      const isHome = f.homeTeamId === teamId;
-      acc.shots += (isHome ? f.stats?.shots_home : f.stats?.shots_away) || 8;
-      acc.passes += (isHome ? f.stats?.passes_home : f.stats?.passes_away) || 350;
-      const successful = (isHome ? f.stats?.successful_passes_home : f.stats?.successful_passes_away) || 280;
-      const total = (isHome ? f.stats?.passes_home : f.stats?.passes_away) || 350;
+    const sortedLegs = relevantLegs.sort((a,b) => b.round - a.round).slice(0, 5);
+    
+    if (sortedLegs.length === 0) return { shots: 8, passes: 350, passAccuracy: 75 };
+
+    const totals = sortedLegs.reduce((acc, l) => {
+      acc.shots += (l.isHome ? l.stats?.shots_home : l.stats?.shots_away) || 8;
+      acc.passes += (l.isHome ? l.stats?.passes_home : l.stats?.passes_away) || 350;
+      const successful = (l.isHome ? l.stats?.successful_passes_home : l.stats?.successful_passes_away) || 280;
+      const total = (l.isHome ? l.stats?.passes_home : l.stats?.passes_away) || 350;
       acc.accTotal += (successful / total) * 100;
       return acc;
     }, { shots: 0, passes: 0, accTotal: 0 });
 
     return {
-      shots: totals.shots / relevant.length,
-      passes: totals.passes / relevant.length,
-      passAccuracy: totals.accTotal / relevant.length
+      shots: totals.shots / sortedLegs.length,
+      passes: totals.passes / sortedLegs.length,
+      passAccuracy: totals.accTotal / sortedLegs.length
     };
   };
 
@@ -54,19 +59,31 @@ export function calculateLocalPrediction(
 
   // 4. Form Calculation (Last 5 games)
   const getFormWeight = (team: Team) => {
-    const last5 = fixtures
-      .filter(f => f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id))
-      .sort((a, b) => b.round - a.round)
-      .slice(0, 5);
+    const relevantLegs: any[] = [];
+    fixtures.forEach(f => {
+      const isHomeTeam = f.homeTeamId === team.id;
+      if (f.homeTeamId === team.id || f.awayTeamId === team.id) {
+        if (f.leg1?.status === 'finished') {
+          const score = isHomeTeam ? f.leg1.homeScore! : f.leg1.awayScore!;
+          const oppScore = isHomeTeam ? f.leg1.awayScore! : f.leg1.homeScore!;
+          relevantLegs.push({ score, oppScore, round: f.round });
+        }
+        if (f.leg2?.status === 'finished') {
+          // Home/Away roles swap in Leg 2
+          const score = isHomeTeam ? f.leg2.awayScore! : f.leg2.homeScore!;
+          const oppScore = isHomeTeam ? f.leg2.homeScore! : f.leg2.awayScore!;
+          relevantLegs.push({ score, oppScore, round: f.round });
+        }
+      }
+    });
+
+    const last5Matched = relevantLegs.sort((a,b) => b.round - a.round).slice(0, 5);
     
-    if (last5.length === 0) return 1.0;
+    if (last5Matched.length === 0) return 1.0;
     
-    const points = last5.reduce((acc, f) => {
-      const isHome = f.homeTeamId === team.id;
-      const score = isHome ? f.homeScore! : f.awayScore!;
-      const oppScore = isHome ? f.awayScore! : f.homeScore!;
-      if (score > oppScore) return acc + 3;
-      if (score === oppScore) return acc + 1;
+    const points = last5Matched.reduce((acc, l) => {
+      if (l.score > l.oppScore) return acc + 3;
+      if (l.score === l.oppScore) return acc + 1;
       return acc;
     }, 0);
     
