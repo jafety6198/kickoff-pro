@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useStore, Team } from '@/store/useStore';
-import { calculateStandings } from '@/lib/tournament-engine';
 import { Save, X, Info, BarChart3, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -23,23 +22,18 @@ interface TeamManagementModalProps {
   onClose: () => void;
 }
 
-export function TeamManagementModal({ team: initialTeam, isOpen, onClose }: TeamManagementModalProps) {
-  const { updateTeam, teams, fixtures } = useStore();
+export function TeamManagementModal({ team, isOpen, onClose }: TeamManagementModalProps) {
+  const { updateTeam } = useStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(initialTeam.name);
-  const [description, setDescription] = useState(initialTeam.description || '');
-
-  const team = useMemo(() => {
-    const standings = calculateStandings(teams, fixtures);
-    return standings.find(s => s.id === initialTeam.id) || initialTeam;
-  }, [initialTeam.id, teams, fixtures]);
+  const [name, setName] = useState(team.name);
+  const [description, setDescription] = useState(team.description || '');
 
   const handleSave = () => {
     if (!name.trim()) {
       toast.error('Team name cannot be empty');
       return;
     }
-    updateTeam(initialTeam.id, { 
+    updateTeam(team.id, { 
       name: name.trim(), 
       description: description.trim() 
     });

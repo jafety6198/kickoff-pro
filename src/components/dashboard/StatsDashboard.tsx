@@ -141,9 +141,10 @@ export function StatsDashboard() {
       let tackles = 0;
 
       fixtures.forEach(f => {
-        if (f.homeTeamId === team.id) {
-          goals += (f.homeScore || 0) + (f.homeScore2 || 0);
-          passes += f.stats?.passes_home || 0;
+        if (f.status === 'finished') {
+          if (f.homeTeamId === team.id) {
+            goals += f.homeScore || 0;
+            passes += f.stats?.passes_home || 0;
             saves += f.stats?.saves_home || 0;
             shots += f.stats?.shots_home || 0;
             shotsOnTarget += f.stats?.shots_on_target_home || 0;
@@ -159,7 +160,7 @@ export function StatsDashboard() {
               possessionCount++;
             }
           } else if (f.awayTeamId === team.id) {
-            goals += (f.awayScore || 0) + (f.awayScore2 || 0);
+            goals += f.awayScore || 0;
             passes += f.stats?.passes_away || 0;
             saves += f.stats?.saves_away || 0;
             shots += f.stats?.shots_away || 0;
@@ -176,6 +177,7 @@ export function StatsDashboard() {
               possessionCount++;
             }
           }
+        }
       });
 
       return {
@@ -208,36 +210,49 @@ export function StatsDashboard() {
       .slice(0, 10);
   }, [teamStats]);
 
+  const teamForm = useMemo(() => {
+    return teams.map(team => {
+      const teamFixtures = fixtures
+        .filter(f => f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id))
+        .sort((a, b) => b.round - a.round)
+        .slice(0, 5);
+
+      const form = teamFixtures.map(f => {
+        const isHome = f.homeTeamId === team.id;
+        const score = isHome ? f.homeScore! : f.awayScore!;
+        const oppScore = isHome ? f.awayScore! : f.homeScore!;
+        
+        if (score > oppScore) return 'W';
+        if (score < oppScore) return 'L';
+        return 'D';
+      }).reverse();
+
+      return { ...team, form };
+    });
+  }, [teams, fixtures]);
+
   const tournamentStats = useMemo(() => {
-    // Look at all fixtures that have at least one score piece
-    const playedFixtures = fixtures.filter(f => 
-      f.homeScore !== null || f.awayScore !== null || 
-      f.homeScore2 !== null || f.awayScore2 !== null
-    );
+    const finishedFixtures = fixtures.filter(f => f.status === 'finished');
     
     let highestScore = { value: 0, team: '', match: '' };
     let totalYellowCards = players.reduce((sum, p) => sum + p.yellowCards, 0);
     let totalRedCards = players.reduce((sum, p) => sum + p.redCards, 0);
 
-    playedFixtures.forEach(f => {
-      const hTeam = teams.find(t => t.id === f.homeTeamId);
-      const aTeam = teams.find(t => t.id === f.awayTeamId);
-
-      // Check all 4 score possibilities
-      [
-        { val: f.homeScore, team: hTeam },
-        { val: f.awayScore, team: aTeam },
-        { val: f.homeScore2, team: hTeam }, // Home team plays away in Leg 2
-        { val: f.awayScore2, team: aTeam }  // Away team plays home in Leg 2
-      ].forEach(score => {
-        if (score.val !== null && score.val > highestScore.value) {
-          highestScore = {
-            value: score.val,
-            team: score.team?.handleName || score.team?.name || '',
-            match: `${hTeam?.name} vs ${aTeam?.name}`
-          };
-        }
-      });
+    finishedFixtures.forEach(f => {
+      if (f.homeScore! > highestScore.value) {
+        highestScore = { 
+          value: f.homeScore!, 
+          team: teams.find(t => t.id === f.homeTeamId)?.handleName || teams.find(t => t.id === f.homeTeamId)?.name || '',
+          match: `${teams.find(t => t.id === f.homeTeamId)?.name} vs ${teams.find(t => t.id === f.awayTeamId)?.name}`
+        };
+      }
+      if (f.awayScore! > highestScore.value) {
+        highestScore = { 
+          value: f.awayScore!, 
+          team: teams.find(t => t.id === f.awayTeamId)?.handleName || teams.find(t => t.id === f.awayTeamId)?.name || '',
+          match: `${teams.find(t => t.id === f.homeTeamId)?.name} vs ${teams.find(t => t.id === f.awayTeamId)?.name}`
+        };
+      }
     });
 
     const mostPassesTeam = [...teamStats].sort((a, b) => b.totalPasses - a.totalPasses)[0];
@@ -253,11 +268,7 @@ export function StatsDashboard() {
       team: mostSavesTeam?.handleName || mostSavesTeam?.name || 'N/A'
     };
 
-    // Calculate dynamic attendance based on played matches
-    const playedCount = fixtures.filter(f => f.homeScore !== null).length + fixtures.filter(f => f.homeScore2 !== null).length;
-    const avgAttendanceValue = playedCount > 0 ? `${(Math.random() * 5 + 35).toFixed(1)}K` : '0';
-
-    return { mostPasses, mostSaves, highestScore, totalYellowCards, totalRedCards, avgAttendanceValue };
+    return { mostPasses, mostSaves, highestScore, totalYellowCards, totalRedCards };
   }, [fixtures, teams, players, teamStats]);
 
   return (
@@ -268,7 +279,7 @@ export function StatsDashboard() {
           { label: 'Season Goals', value: teamStats.reduce((acc, t) => acc + t.totalGoals, 0), icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
           { label: 'Total Passes', value: teamStats.reduce((acc, t) => acc + t.totalPasses, 0).toLocaleString(), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50' },
           { label: 'Matches Played', value: fixtures.filter(f => f.status === 'finished').length, icon: Activity, color: 'text-purple-500', bg: 'bg-purple-50' },
-          { label: 'Avg Attendance', value: tournamentStats.avgAttendanceValue, icon: Users, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'Avg Attendance', value: '42.5K', icon: Users, color: 'text-amber-500', bg: 'bg-amber-50' },
         ].map((stat, i) => (
           <motion.div 
             key={i}
@@ -442,7 +453,7 @@ export function StatsDashboard() {
                   size="sm"
                   onClick={() => handleGeneratePost('power-rankings-section', { 
                     title: 'Current Form Power Rankings', 
-                    topForm: teamStats
+                    topForm: teamForm
                       .sort((a, b) => b.pts - a.pts)
                       .slice(0, 3)
                       .map(t => ({ 
@@ -461,7 +472,7 @@ export function StatsDashboard() {
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    const data = teamStats.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ name: t.name, pts: t.pts }));
+                    const data = teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ name: t.name, pts: t.pts }));
                     setGraphicData({ type: 'power-rankings', data });
                   }}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
@@ -473,7 +484,7 @@ export function StatsDashboard() {
             </div>
 
             <div className="space-y-4">
-              {teamStats.sort((a, b) => b.pts - a.pts).slice(0, 5).map((team, i) => (
+              {teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map((team, i) => (
                 <div key={team.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <img src={team.logo} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />

@@ -67,15 +67,12 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
     return a.id.localeCompare(b.id);
   });
 
-  // Process fixtures (including pending ones that might have partial scores for yellow status)
-  sortedFixtures.forEach(f => {
+  // Process finished fixtures
+  sortedFixtures.filter(f => f.status === 'finished').forEach(f => {
     const home = standingsMap.get(f.homeTeamId);
     const away = standingsMap.get(f.awayTeamId);
     
-    if (!home || !away) return;
-
-    // Process Leg 1
-    if (f.homeScore !== null && f.awayScore !== null) {
+    if (home && away && f.homeScore !== null && f.awayScore !== null) {
       home.played += 1;
       away.played += 1;
       home.gf += f.homeScore;
@@ -103,42 +100,10 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
         away.pts += 1;
         away.form?.push('D');
       }
-    }
-
-    // Process Leg 2
-    if (f.homeScore2 !== null && f.awayScore2 !== null) {
-      home.played += 1;
-      away.played += 1;
-      // In Leg 2: awayScore2 is B's score (home), homeScore2 is A's score (away)
-      home.gf += f.homeScore2;
-      home.ga += f.awayScore2;
-      away.gf += f.awayScore2;
-      away.ga += f.homeScore2;
       
-      if (f.homeScore2 > f.awayScore2) {
-        home.won += 1;
-        home.pts += 3;
-        home.form?.push('W');
-        away.lost += 1;
-        away.form?.push('L');
-      } else if (f.homeScore2 < f.awayScore2) {
-        away.won += 1;
-        away.pts += 3;
-        away.form?.push('W');
-        home.lost += 1;
-        home.form?.push('L');
-      } else {
-        home.drawn += 1;
-        away.drawn += 1;
-        home.pts += 1;
-        home.form?.push('D');
-        away.pts += 1;
-        away.form?.push('D');
-      }
+      home.gd = home.gf - home.ga;
+      away.gd = away.gf - away.ga;
     }
-
-    home.gd = home.gf - home.ga;
-    away.gd = away.gf - away.ga;
   });
 
   // Keep only the last 5 results for form
