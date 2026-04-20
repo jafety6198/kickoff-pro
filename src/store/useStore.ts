@@ -43,6 +43,8 @@ export interface Fixture {
   awayTeamId: string;
   homeScore: number | null;
   awayScore: number | null;
+  homeScore2?: number | null;
+  awayScore2?: number | null;
   round: number;
   status: 'pending' | 'finished';
   prediction?: {
@@ -126,7 +128,7 @@ interface TournamentState {
   setTeams: (teams: Team[]) => void;
   setFixtures: (fixtures: Fixture[]) => void;
   setPlayers: (players: Player[]) => void;
-  updateFixtureScore: (fixtureId: string, homeScore: number, awayScore: number, stats?: Fixture['stats']) => void;
+  updateFixtureScore: (fixtureId: string, homeScore: number | null, awayScore: number | null, homeScore2?: number | null, awayScore2?: number | null, stats?: Fixture['stats']) => void;
   updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   updateTeam: (teamId: string, updates: Partial<Team>) => void;
   updatePlayerStats: (playerId: string, updates: Partial<Player>) => void;
@@ -295,11 +297,23 @@ export const useStore = create<TournamentState>()(
         get().saveProfile();
       },
       
-      updateFixtureScore: (fixtureId, homeScore, awayScore, stats) => {
+      updateFixtureScore: (fixtureId, homeScore, awayScore, homeScore2, awayScore2, stats) => {
         set((state) => {
-          const updatedFixtures = state.fixtures.map((f) => 
-            f.id === fixtureId ? { ...f, homeScore, awayScore, stats, status: 'finished' as const } : f
-          );
+          const updatedFixtures = state.fixtures.map((f) => {
+            if (f.id === fixtureId) {
+              const isFinished = homeScore !== null && awayScore !== null && homeScore2 !== null && awayScore2 !== null;
+              return { 
+                ...f, 
+                homeScore, 
+                awayScore, 
+                homeScore2: homeScore2 ?? null, 
+                awayScore2: awayScore2 ?? null, 
+                stats, 
+                status: (isFinished ? 'finished' : 'pending') as 'finished' | 'pending'
+              };
+            }
+            return f;
+          });
           return { fixtures: updatedFixtures };
         });
         get().saveProfile();

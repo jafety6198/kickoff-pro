@@ -141,10 +141,9 @@ export function StatsDashboard() {
       let tackles = 0;
 
       fixtures.forEach(f => {
-        if (f.status === 'finished') {
-          if (f.homeTeamId === team.id) {
-            goals += f.homeScore || 0;
-            passes += f.stats?.passes_home || 0;
+        if (f.homeTeamId === team.id) {
+          goals += (f.homeScore || 0) + (f.homeScore2 || 0);
+          passes += f.stats?.passes_home || 0;
             saves += f.stats?.saves_home || 0;
             shots += f.stats?.shots_home || 0;
             shotsOnTarget += f.stats?.shots_on_target_home || 0;
@@ -160,7 +159,7 @@ export function StatsDashboard() {
               possessionCount++;
             }
           } else if (f.awayTeamId === team.id) {
-            goals += f.awayScore || 0;
+            goals += (f.awayScore || 0) + (f.awayScore2 || 0);
             passes += f.stats?.passes_away || 0;
             saves += f.stats?.saves_away || 0;
             shots += f.stats?.shots_away || 0;
@@ -177,7 +176,6 @@ export function StatsDashboard() {
               possessionCount++;
             }
           }
-        }
       });
 
       return {
@@ -209,27 +207,6 @@ export function StatsDashboard() {
       .sort((a, b) => b.totalGoals - a.totalGoals)
       .slice(0, 10);
   }, [teamStats]);
-
-  const teamForm = useMemo(() => {
-    return teams.map(team => {
-      const teamFixtures = fixtures
-        .filter(f => f.status === 'finished' && (f.homeTeamId === team.id || f.awayTeamId === team.id))
-        .sort((a, b) => b.round - a.round)
-        .slice(0, 5);
-
-      const form = teamFixtures.map(f => {
-        const isHome = f.homeTeamId === team.id;
-        const score = isHome ? f.homeScore! : f.awayScore!;
-        const oppScore = isHome ? f.awayScore! : f.homeScore!;
-        
-        if (score > oppScore) return 'W';
-        if (score < oppScore) return 'L';
-        return 'D';
-      }).reverse();
-
-      return { ...team, form };
-    });
-  }, [teams, fixtures]);
 
   const tournamentStats = useMemo(() => {
     const finishedFixtures = fixtures.filter(f => f.status === 'finished');
@@ -453,7 +430,7 @@ export function StatsDashboard() {
                   size="sm"
                   onClick={() => handleGeneratePost('power-rankings-section', { 
                     title: 'Current Form Power Rankings', 
-                    topForm: teamForm
+                    topForm: teamStats
                       .sort((a, b) => b.pts - a.pts)
                       .slice(0, 3)
                       .map(t => ({ 
@@ -472,7 +449,7 @@ export function StatsDashboard() {
                   variant="outline" 
                   size="sm"
                   onClick={() => {
-                    const data = teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ name: t.name, pts: t.pts }));
+                    const data = teamStats.sort((a, b) => b.pts - a.pts).slice(0, 5).map(t => ({ name: t.name, pts: t.pts }));
                     setGraphicData({ type: 'power-rankings', data });
                   }}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
@@ -484,7 +461,7 @@ export function StatsDashboard() {
             </div>
 
             <div className="space-y-4">
-              {teamForm.sort((a, b) => b.pts - a.pts).slice(0, 5).map((team, i) => (
+              {teamStats.sort((a, b) => b.pts - a.pts).slice(0, 5).map((team, i) => (
                 <div key={team.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <img src={team.logo} className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />

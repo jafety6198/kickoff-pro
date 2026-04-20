@@ -95,9 +95,21 @@ export function MatchScanner() {
         return;
       }
 
-      // Determine which score goes where based on home/away assignment in fixture
-      const homeScore = fixture.homeTeamId === homeTeam.id ? result.score_home : result.score_away;
-      const awayScore = fixture.homeTeamId === homeTeam.id ? result.score_away : result.score_home;
+      // Determine which scores and legs to update based on who is playing at home in the scanned match
+      let h1 = fixture.homeScore;
+      let a1 = fixture.awayScore;
+      let h2 = fixture.homeScore2 || null;
+      let a2 = fixture.awayScore2 || null;
+
+      if (fixture.homeTeamId === homeTeam.id) {
+        // Scanned match matches Leg 1 (Original Home Team is Home)
+        h1 = result.score_home;
+        a1 = result.score_away;
+      } else {
+        // Scanned match matches Leg 2 (Original Away Team is Home)
+        a2 = result.score_home; // Away team in fixture is Home in Leg 2
+        h2 = result.score_away; // Home team in fixture is Away in Leg 2
+      }
 
       const stats: any = {
         possession_home: fixture.homeTeamId === homeTeam.id ? result.possession_home : result.possession_away,
@@ -128,7 +140,7 @@ export function MatchScanner() {
         saves_away: fixture.homeTeamId === homeTeam.id ? result.saves_away : result.saves_home,
       };
 
-      updateFixtureScore(fixture.id, homeScore, awayScore, stats);
+      updateFixtureScore(fixture.id, h1, a1, h2, a2, stats);
 
       // Update player goals
       result.scorers.forEach(scorer => {

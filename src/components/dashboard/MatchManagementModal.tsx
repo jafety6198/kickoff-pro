@@ -23,6 +23,8 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
   const { teams, updateFixtureScore } = useStore();
   const [homeScore, setHomeScore] = useState<string>(fixture.homeScore?.toString() || '');
   const [awayScore, setAwayScore] = useState<string>(fixture.awayScore?.toString() || '');
+  const [homeScore2, setHomeScore2] = useState<string>(fixture.homeScore2?.toString() || '');
+  const [awayScore2, setAwayScore2] = useState<string>(fixture.awayScore2?.toString() || '');
   
   const [stats, setStats] = useState({
     possession_home: fixture.stats?.possession_home?.toString() || '',
@@ -59,9 +61,13 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
   };
 
   const handleSave = () => {
-    const h = parseInt(homeScore);
-    const a = parseInt(awayScore);
-    if (isNaN(h) || isNaN(a)) {
+    const h1 = homeScore !== '' ? parseInt(homeScore) : null;
+    const a1 = awayScore !== '' ? parseInt(awayScore) : null;
+    const h2 = homeScore2 !== '' ? parseInt(homeScore2) : null;
+    const a2 = awayScore2 !== '' ? parseInt(awayScore2) : null;
+    
+    if ((homeScore !== '' && isNaN(h1!)) || (awayScore !== '' && isNaN(a1!)) || 
+        (homeScore2 !== '' && isNaN(h2!)) || (awayScore2 !== '' && isNaN(a2!))) {
       toast.error('Please enter valid scores');
       return;
     }
@@ -93,7 +99,7 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
       saves_away: parseInt(stats.saves_away) || 0,
     };
 
-    updateFixtureScore(fixture.id, h, a, parsedStats);
+    updateFixtureScore(fixture.id, h1, a1, h2, a2, parsedStats);
     toast.success('Match result updated!');
     onClose();
   };
@@ -132,39 +138,76 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
             <DialogDescription className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
               Enter scores and match statistics manually
             </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-8">
-            {/* Score Display Area */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 flex flex-col items-center text-center space-y-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white border border-slate-100 p-3 shadow-sm">
-                  <img src={homeTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+          </DialogHeader>          <div className="space-y-10">
+            {/* Leg 1: Home Match */}
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">Leg 1: Home Match</h4>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 flex flex-col items-center text-center space-y-3">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-slate-100 p-2.5 shadow-sm">
+                    <img src={homeTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <p className="font-black text-slate-900 uppercase tracking-tighter text-[10px] truncate w-full">{homeTeam?.name}</p>
+                  <Input 
+                    type="number" 
+                    value={homeScore}
+                    onChange={(e) => setHomeScore(e.target.value)}
+                    className="w-14 h-14 sm:w-16 sm:h-16 text-center text-2xl font-black rounded-2xl bg-white border-slate-200 focus:ring-primary/20"
+                    placeholder="-"
+                  />
                 </div>
-                <p className="font-black text-slate-900 uppercase tracking-tighter text-sm sm:text-base truncate w-full">{homeTeam?.name}</p>
-                <Input 
-                  type="number" 
-                  value={homeScore}
-                  onChange={(e) => setHomeScore(e.target.value)}
-                  className="w-16 h-16 sm:w-20 sm:h-20 text-center text-3xl font-black rounded-3xl bg-white border-slate-200 focus:ring-primary/20"
-                  placeholder="-"
-                />
+
+                <div className="text-xl font-black text-slate-200 italic pt-12">VS</div>
+
+                <div className="flex-1 flex flex-col items-center text-center space-y-3">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-slate-100 p-2.5 shadow-sm">
+                    <img src={awayTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <p className="font-black text-slate-900 uppercase tracking-tighter text-[10px] truncate w-full">{awayTeam?.name}</p>
+                  <Input 
+                    type="number" 
+                    value={awayScore}
+                    onChange={(e) => setAwayScore(e.target.value)}
+                    className="w-14 h-14 sm:w-16 sm:h-16 text-center text-2xl font-black rounded-2xl bg-white border-slate-200 focus:ring-primary/20"
+                    placeholder="-"
+                  />
+                </div>
               </div>
+            </div>
 
-              <div className="text-2xl font-black text-slate-200 italic pt-12">VS</div>
-
-              <div className="flex-1 flex flex-col items-center text-center space-y-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white border border-slate-100 p-3 shadow-sm">
-                  <img src={awayTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+            {/* Leg 2: Away Match */}
+            <div className="space-y-4 p-6 bg-slate-100 rounded-3xl border border-slate-200/50">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] text-center">Leg 2: Away Match</h4>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 flex flex-col items-center text-center space-y-3">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-slate-100 p-2.5 shadow-sm">
+                    <img src={awayTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <p className="font-black text-slate-900 uppercase tracking-tighter text-[10px] truncate w-full">{awayTeam?.name}</p>
+                  <Input 
+                    type="number" 
+                    value={awayScore2}
+                    onChange={(e) => setAwayScore2(e.target.value)}
+                    className="w-14 h-14 sm:w-16 sm:h-16 text-center text-2xl font-black rounded-2xl bg-white border-slate-200 focus:ring-primary/20"
+                    placeholder="-"
+                  />
                 </div>
-                <p className="font-black text-slate-900 uppercase tracking-tighter text-sm sm:text-base truncate w-full">{awayTeam?.name}</p>
-                <Input 
-                  type="number" 
-                  value={awayScore}
-                  onChange={(e) => setAwayScore(e.target.value)}
-                  className="w-16 h-16 sm:w-20 sm:h-20 text-center text-3xl font-black rounded-3xl bg-white border-slate-200 focus:ring-primary/20"
-                  placeholder="-"
-                />
+
+                <div className="text-xl font-black text-slate-200 italic pt-12">VS</div>
+
+                <div className="flex-1 flex flex-col items-center text-center space-y-3">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white border border-slate-100 p-2.5 shadow-sm">
+                    <img src={homeTeam?.logo} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  </div>
+                  <p className="font-black text-slate-900 uppercase tracking-tighter text-[10px] truncate w-full">{homeTeam?.name}</p>
+                  <Input 
+                    type="number" 
+                    value={homeScore2}
+                    onChange={(e) => setHomeScore2(e.target.value)}
+                    className="w-14 h-14 sm:w-16 sm:h-16 text-center text-2xl font-black rounded-2xl bg-white border-slate-200 focus:ring-primary/20"
+                    placeholder="-"
+                  />
+                </div>
               </div>
             </div>
 
