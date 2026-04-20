@@ -92,20 +92,32 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
   }, [storeFixtures]);
 
   const fixtures = useMemo(() => {
-    return storeFixtures.map(f => ({
-      ...f,
-      team_a: {
-        name: storeTeams.find(t => t.id === f.homeTeamId)?.name,
-        logo_url: storeTeams.find(t => t.id === f.homeTeamId)?.logo
-      },
-      team_b: {
-        name: storeTeams.find(t => t.id === f.awayTeamId)?.name,
-        logo_url: storeTeams.find(t => t.id === f.awayTeamId)?.logo
-      },
-      score_a: f.homeScore,
-      score_b: f.awayScore,
-      match_date: new Date().toISOString()
-    }));
+    return storeFixtures.map(f => {
+      const homeTeam = storeTeams.find(t => t.id === f.homeTeamId);
+      const awayTeam = storeTeams.find(t => t.id === f.awayTeamId);
+      
+      const aggScoreA = (f.homeScore || 0) + (f.homeScore2 || 0);
+      const aggScoreB = (f.awayScore || 0) + (f.awayScore2 || 0);
+
+      return {
+        ...f,
+        team_a: {
+          name: homeTeam?.name,
+          logo_url: homeTeam?.logo
+        },
+        team_b: {
+          name: awayTeam?.name,
+          logo_url: awayTeam?.logo
+        },
+        score_a: f.homeScore,
+        score_b: f.awayScore,
+        score_a2: f.homeScore2,
+        score_b2: f.awayScore2,
+        agg_a: aggScoreA,
+        agg_b: aggScoreB,
+        match_date: f.updatedAt || new Date().toISOString()
+      };
+    });
   }, [storeFixtures, storeTeams]);
 
   useEffect(() => {
@@ -259,13 +271,24 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                    
                    <div className="relative">
                       <div className="bg-[#00FF85] px-10 py-6 rounded-[2rem] shadow-[0_20px_50px_rgba(0,255,133,0.3)] rotate-[-2deg] flex items-center gap-6">
-                        <span className="text-7xl font-black text-[#3D195B] italic leading-none">{selectedFixture.score_a}</span>
+                        <span className="text-7xl font-black text-[#3D195B] italic leading-none">
+                          {selectedFixture.status === 'finished' ? selectedFixture.agg_a : (selectedFixture.score_a ?? 0)}
+                        </span>
                         <div className="w-1.5 h-12 bg-[#3D195B]/20 rounded-full" />
-                        <span className="text-7xl font-black text-[#3D195B] italic leading-none">{selectedFixture.score_b}</span>
+                        <span className="text-7xl font-black text-[#3D195B] italic leading-none">
+                          {selectedFixture.status === 'finished' ? selectedFixture.agg_b : (selectedFixture.score_b ?? 0)}
+                        </span>
                       </div>
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#3D195B] px-4 py-1 rounded-full border-2 border-[#00FF85]">
-                         <span className="text-[10px] font-black text-[#00FF85] uppercase tracking-widest italic">Full Time</span>
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#3D195B] px-4 py-1 rounded-full border-2 border-[#00FF85] whitespace-nowrap">
+                         <span className="text-[10px] font-black text-[#00FF85] uppercase tracking-widest italic">
+                           {selectedFixture.status === 'finished' ? 'Final (AGG)' : 'Leg 1 Result'}
+                         </span>
                       </div>
+                      {selectedFixture.status === 'finished' && (
+                        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-[10px] font-black uppercase tracking-widest text-center w-full">
+                          L1: {selectedFixture.score_a}-{selectedFixture.score_b} • L2: {selectedFixture.score_a2}-{selectedFixture.score_b2}
+                        </div>
+                      )}
                    </div>
 
                    <div className="flex flex-col items-center gap-3">
@@ -784,7 +807,7 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                     <span className="text-lg font-black text-[#3D195B] uppercase tracking-tighter">{selectedFixture.team_a?.name}</span>
                   </div>
                   <div className="text-3xl font-black text-[#3D195B] italic px-6">
-                    {selectedFixture.score_a} - {selectedFixture.score_b}
+                    {selectedFixture.status === 'finished' ? `${selectedFixture.agg_a} - ${selectedFixture.agg_b}` : `${selectedFixture.score_a ?? 0} - ${selectedFixture.score_b ?? 0}`}
                   </div>
                   <div className="flex items-center gap-4 flex-1 justify-end">
                     <span className="text-lg font-black text-[#3D195B] uppercase tracking-tighter">{selectedFixture.team_b?.name}</span>

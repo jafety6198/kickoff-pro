@@ -52,6 +52,7 @@ export interface Fixture {
     awayScore: number;
     reasoning?: string;
   };
+  updatedAt?: string;
   stats?: {
     possession_home: number;
     possession_away: number;
@@ -309,6 +310,7 @@ export const useStore = create<TournamentState>()(
                 homeScore2: homeScore2 ?? null, 
                 awayScore2: awayScore2 ?? null, 
                 stats, 
+                updatedAt: new Date().toISOString(),
                 status: (isFinished ? 'finished' : 'pending') as 'finished' | 'pending'
               };
             }

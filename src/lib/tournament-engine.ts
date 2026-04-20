@@ -68,7 +68,7 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
   });
 
   // Process fixtures (including pending ones that might have partial scores for yellow status)
-  fixtures.forEach(f => {
+  sortedFixtures.forEach(f => {
     const home = standingsMap.get(f.homeTeamId);
     const away = standingsMap.get(f.awayTeamId);
     
