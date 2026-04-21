@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { toPng } from 'html-to-image';
+import { google } from '@/lib/gemini';
+import { generateText } from 'ai';
 
 export function AIOracle() {
   const { teams, fixtures, tournamentName, updateFixturePrediction } = useStore();
@@ -39,17 +41,44 @@ export function AIOracle() {
     try {
       setPredictingId(fixture.id);
       
-      // Simulate a small delay for "thinking" effect
-      await new Promise(resolve => setTimeout(resolve, 600));
-
-      const prediction = calculateLocalPrediction(homeTeam, awayTeam, fixtures);
+      const localPrediction = calculateLocalPrediction(homeTeam, awayTeam, fixtures);
       
-      if (prediction.homeScore !== undefined) {
-        updateFixturePrediction(fixture.id, prediction);
-      }
+      const prompt = `Analyze an upcoming eFootball match: ${homeTeam.name} vs ${awayTeam.name}.
+      
+      HOME TEAM DATA (Season): 
+      - Played: ${homeTeam.played}, GF: ${homeTeam.gf}, GA: ${homeTeam.ga}, Pts: ${homeTeam.pts}
+      - Playstyle: ${homeTeam.playstyle || 'Balanced'}
+      
+      AWAY TEAM DATA (Season):
+      - Played: ${awayTeam.played}, GF: ${awayTeam.gf}, GA: ${awayTeam.ga}, Pts: ${awayTeam.pts}
+      - Playstyle: ${awayTeam.playstyle || 'Counter-Attack'}
+      
+      Tournament History: All matches are two-legged. This is Leg ${fixture.round % 2 === 0 ? '2' : '1'}.
+      
+      The statistical model predicts a score of ${localPrediction.homeScore}-${localPrediction.awayScore}.
+      
+      TASK:
+      Provide a highly professional, clinical, yet engaging tactical reasoning (MAX 150 characters) 
+      for why this match might go this way. Focus on "tactical transitions", "clinical finishing", or "defensive shape". 
+      Keep it strictly as a string without quotes.`;
+
+      const { text } = await generateText({
+        model: google('gemini-1.5-flash'),
+        prompt,
+      });
+
+      const finalPrediction = {
+        ...localPrediction,
+        reasoning: text.trim() || localPrediction.reasoning
+      };
+      
+      updateFixturePrediction(fixture.id, finalPrediction);
     } catch (error) {
       console.error('Prediction Error:', error);
-      toast.error('Prediction engine encountered a calculation error.');
+      // Fallback to local
+      const localPrediction = calculateLocalPrediction(homeTeam, awayTeam, fixtures);
+      updateFixturePrediction(fixture.id, localPrediction);
+      toast.error('Oracle using offline logic due to connectivity.');
     } finally {
       setPredictingId(null);
     }

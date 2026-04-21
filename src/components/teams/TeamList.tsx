@@ -116,12 +116,14 @@ export function TeamList() {
         </div>
 
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="rounded-2xl bg-pl-purple text-white hover:bg-pl-dark px-8 py-4 lg:py-6 h-auto font-black uppercase tracking-widest shadow-xl shadow-pl-purple/20">
-              <Plus className="w-5 h-5 mr-2" />
-              Register Club
-            </Button>
-          </DialogTrigger>
+          <DialogTrigger 
+            render={
+              <Button className="rounded-2xl bg-pl-purple text-white hover:bg-pl-dark px-8 py-4 lg:py-6 h-auto font-black uppercase tracking-widest shadow-xl shadow-pl-purple/20">
+                <Plus className="w-5 h-5 mr-2" />
+                Register Club
+              </Button>
+            }
+          />
           <DialogContent className="bg-white border-none rounded-[32px] sm:max-w-[425px] p-8 shadow-2xl">
             <DialogHeader>
               <DialogTitle className="text-3xl font-black text-pl-purple uppercase tracking-tighter">Register Club</DialogTitle>

@@ -15,7 +15,10 @@ import {
   Sparkles,
   Copy,
   Eye,
-  Layout
+  Layout,
+  PieChart as PieIcon,
+  MousePointer2,
+  Tornado
 } from 'lucide-react';
 import { StatGraphicModal } from '@/components/dashboard/StatGraphicModal';
 import { useStore, Team, Fixture, Player } from '@/store/useStore';
@@ -32,6 +35,27 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  ZAxis,
+  Tooltip,
+  Cell,
+  CartesianGrid,
+  Legend,
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  LineChart,
+  Line
+} from 'recharts';
+import { google } from '@/lib/gemini';
+import { generateText } from 'ai';
+import Markdown from 'react-markdown';
 
 export function StatsDashboard() {
   const { teams, fixtures, players, tournamentName } = useStore();
@@ -73,17 +97,46 @@ export function StatsDashboard() {
   const handleTournamentInsight = async () => {
     try {
       setInsightLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 800));
       
-      const topTeam = teamStats.sort((a,b) => b.pts - a.pts)[0];
-      const mostGoals = teamStats.sort((a,b) => b.totalGoals - a.totalGoals)[0];
+      const prompt = `You are an elite tactical analyst for the "${tournamentName}" eFootball Series. 
+      Analyze the current standings and statistics provided below and write a highly creative, 
+      professional, and engaging "Tactical Newsletter" or "Deep Insight" report. 
+      
+      Use a tone that is a mix of a professional sports analyst (like Tifo Football) and a high-stakes esports commentator.
+      
+      STANDINGS:
+      ${teamStats.sort((a,b) => b.pts - a.pts).map(t => `${t.name}: ${t.pts} pts, ${t.totalGoals} GF, ${t.ga} GA`).join('\n')}
+      
+      ADDITIONAL DATA:
+      - Total Goals: ${teamStats.reduce((acc, t) => acc + t.totalGoals, 0)}
+      - Top Scorer: ${teamScorerRace[0]?.name}
+      - Discipline: ${tournamentStats.totalYellowCards} Yellows, ${tournamentStats.totalRedCards} Reds
+      
+      STRUCTURE:
+      1. THE HIERARCHY: Analyze the title race or top performers.
+      2. TACTICAL TRENDS: Discuss the playstyles based on GF/GA and stats like possession.
+      3. CRITICAL DATA POINT: Highlight a surprising stat or a team exceeding expectations.
+      4. SEASON PROJECTOR: One bold prediction for the next set of fixtures.
+      
+      Use Markdown formatting (bolding, headers, lists). Keep it punchy.`;
 
-      const insight = `## 📊 LUMINAMATH INSIGHTS\n\n### 👑 Team to Watch: **${topTeam.name}**\nDominating the standings with ${topTeam.pts} points. Their statistical efficiency in transition is currently unmatched in the series.\n\n### 🎯 Tactical Trend\nWe're seeing a shift towards high-volume offensive strategies. **${mostGoals.name}** leads the league in scoring with ${mostGoals.totalGoals} goals, forcing opponents into defensive adaptations.\n\n### 🔮 Strategic Outlook\nData points to a high-scoring finish for the upcoming rounds. Teams with balanced defensive strength metrics are currently showing higher win-probability in simulation.`;
+      const { text } = await generateText({
+        model: google('gemini-1.5-flash'),
+        prompt,
+      });
 
-      setGeneratedPost(insight);
+      setGeneratedPost(text);
       setIsPostDialogOpen(true);
     } catch (error) {
-      toast.error('Failed to generate insights.');
+      console.error('Insight Error:', error);
+      toast.error('Oracle reached its computational limit. Standard insights applied.');
+      
+      // Fallback
+      const topTeam = teamStats.sort((a,b) => b.pts - a.pts)[0];
+      const mostGoals = teamStats.sort((a,b) => b.totalGoals - a.totalGoals)[0];
+      const insight = `## 📊 LUMINAMATH INSIGHTS\n\n### 👑 Team to Watch: **${topTeam?.name}**\nDominating the standings with ${topTeam?.pts} points. \n\n### 🎯 Tactical Trend\n**${mostGoals?.name}** is the offensive benchmark.`;
+      setGeneratedPost(insight);
+      setIsPostDialogOpen(true);
     } finally {
       setInsightLoading(false);
     }
@@ -302,6 +355,38 @@ export function StatsDashboard() {
     return { mostPasses, mostSaves, highestScore, totalYellowCards, totalRedCards };
   }, [fixtures, teams, players, teamStats]);
 
+  const quadrantData = useMemo(() => {
+    return teamStats.map(t => {
+      return {
+        name: t.name,
+        gf: t.totalGoals,
+        ga: t.ga || 0,
+        played: t.played,
+        possession: t.avgPossession,
+        efficiency: t.totalShots > 0 ? Math.round((t.totalGoals / t.totalShots) * 100) : 0,
+        logo: t.logo
+      };
+    });
+  }, [teamStats]);
+
+  const outcomeData = useMemo(() => {
+    let wins = 0, draws = 0, losses = 0;
+    fixtures.forEach(f => {
+      [f.leg1, f.leg2].forEach(leg => {
+        if (leg?.status === 'finished') {
+          if (leg.homeScore! > leg.awayScore!) wins++;
+          else if (leg.homeScore! < leg.awayScore!) losses++;
+          else draws++;
+        }
+      });
+    });
+    return [
+      { name: 'Wins', value: wins, color: '#00FF85' },
+      { name: 'Draws', value: draws, color: '#94a3b8' },
+      { name: 'Losses', value: losses, color: '#f87171' }
+    ];
+  }, [fixtures]);
+
   return (
     <div className="space-y-8 pb-12">
       {/* Quick Insights Hero */}
@@ -330,7 +415,217 @@ export function StatsDashboard() {
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 my-12">
+        {/* Tactical Quadrant: Attack vs Defense */}
+        <div className="glass-card p-6 sm:p-8 space-y-6 bg-white overflow-hidden group">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <Tornado className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Tactical Quadrant</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Offensive vs Defensive Efficiency</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="h-[350px] w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis 
+                  dataKey="gf" 
+                  name="Goals For" 
+                  label={{ value: 'Goals For (Attack)', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 900 }}
+                  type="number"
+                  fontSize={10}
+                  stroke="#94a3b8"
+                />
+                <YAxis 
+                  dataKey="ga" 
+                  name="Goals Against" 
+                  label={{ value: 'Goals Against (Defense)', angle: -90, position: 'insideLeft', fontSize: 10, fontWeight: 900 }}
+                  type="number"
+                  fontSize={10}
+                  stroke="#94a3b8"
+                  reversed
+                />
+                <Tooltip 
+                  cursor={{ strokeDasharray: '3 3' }} 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white border border-slate-100 shadow-xl p-3 rounded-2xl">
+                          <div className="flex items-center gap-2 mb-2">
+                             <img src={data.logo} className="w-5 h-5" />
+                             <p className="text-xs font-black uppercase text-slate-900">{data.name}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">Attack: {data.gf} Goals</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">Defense: {data.ga} GA</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Scatter name="Teams" data={quadrantData}>
+                   {quadrantData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3D195B' : '#00FF85'} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-[9px] font-black uppercase tracking-widest text-center">
+             <div className="p-2 border border-slate-100 rounded-lg bg-emerald-50 text-emerald-600">Elite Dominators</div>
+             <div className="p-2 border border-slate-100 rounded-lg bg-orange-50 text-orange-600">High Risk Attackers</div>
+          </div>
+        </div>
+
+        {/* Possession vs Efficiency */}
+        <div className="glass-card p-6 sm:p-8 space-y-6 bg-white group">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <Zap className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Conversion Matrix</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Possession vs Goal Efficiency</p>
+            </div>
+          </div>
+
+          <div className="h-[350px] w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis 
+                  dataKey="possession" 
+                  name="Possession" 
+                  label={{ value: 'Avg Possession %', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 900 }}
+                  type="number"
+                  domain={[30, 70]}
+                  fontSize={10}
+                  stroke="#94a3b8"
+                />
+                <YAxis 
+                  dataKey="efficiency" 
+                  name="Efficiency" 
+                  label={{ value: 'Conversion Rate %', angle: -90, position: 'insideLeft', fontSize: 10, fontWeight: 900 }}
+                  type="number"
+                  fontSize={10}
+                  stroke="#94a3b8"
+                />
+                <Tooltip 
+                  cursor={{ strokeDasharray: '3 3' }} 
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white border border-slate-100 shadow-xl p-3 rounded-2xl">
+                          <p className="text-xs font-black uppercase text-slate-900 mb-2">{data.name}</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">Control: {data.possession}%</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">Lethality: {data.efficiency}%</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Scatter name="Efficiency" data={quadrantData}>
+                   {quadrantData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.efficiency > 20 ? '#F97316' : '#3B82F6'} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Match Outcome Distribution */}
+        <div className="glass-card p-6 sm:p-8 space-y-6 bg-white overflow-hidden group">
+           <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                <PieIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Outcome Spectrum</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tournament Result Distribution</p>
+              </div>
+            </div>
+            
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={outcomeData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {outcomeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold' }}
+                    itemStyle={{ textTransform: 'uppercase' }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    iconType="circle"
+                    formatter={(value) => <span className="text-[10px] font-black uppercase text-slate-500">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+        </div>
+
+        {/* Tournament Pulse - Activity over matchdays */}
+        <div className="glass-card p-6 sm:p-8 space-y-6 bg-white group">
+           <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <Activity className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Tournament Pulse</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Goal Velocity by Matchday</p>
+              </div>
+            </div>
+
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={(() => {
+                   const dayStats: { [key: number]: number } = {};
+                   fixtures.forEach(f => {
+                     const round = f.round;
+                     if (!dayStats[round]) dayStats[round] = 0;
+                     if (f.leg1?.status === 'finished') dayStats[round] += (f.leg1.homeScore! + f.leg1.awayScore!);
+                     if (f.leg2?.status === 'finished') dayStats[round] += (f.leg2.homeScore! + f.leg2.awayScore!);
+                   });
+                   return Object.entries(dayStats).map(([round, goals]) => ({ round: `MD ${round}`, goals }));
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="round" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                     contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="goals" fill="#3D195B" radius={[4, 4, 0, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 mb-8">
         <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Tournament Stats</h2>
         <div className="flex items-center gap-3">
           <Button 
@@ -790,29 +1085,37 @@ export function StatsDashboard() {
       />
       
       <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto rounded-[2rem] border-none shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              AI Generated Post
+            <DialogTitle className="flex items-center gap-3 text-2xl font-black italic uppercase tracking-tighter">
+              <Sparkles className="w-6 h-6 text-primary" />
+              Elite Tournament Insights
             </DialogTitle>
-            <DialogDescription>
-              Copy this post to share your tournament stats on social media!
-            </DialogDescription>
           </DialogHeader>
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mt-4 relative">
-            <p className="text-sm text-slate-700 whitespace-pre-wrap font-medium">{generatedPost}</p>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute top-2 right-2 text-slate-400 hover:text-primary"
-              onClick={copyPostToClipboard}
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="flex justify-end mt-4">
-            <Button onClick={() => setIsPostDialogOpen(false)}>Close</Button>
+          
+          <div className="space-y-6 mt-4 pb-4">
+            <div className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 prose prose-slate max-w-none prose-headings:font-black prose-headings:uppercase prose-p:font-medium prose-p:text-slate-600">
+              <div className="markdown-body">
+                <Markdown>{generatedPost}</Markdown>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={copyPostToClipboard}
+                className="flex-1 h-14 rounded-2xl bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] hover:bg-slate-800 transition-all border-none"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy to Clipboard
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setIsPostDialogOpen(false)}
+                className="flex-1 h-14 rounded-2xl border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 transition-all"
+              >
+                Close Report
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
