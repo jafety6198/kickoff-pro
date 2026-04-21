@@ -102,21 +102,24 @@ export function StatsDashboard() {
       Analyze the current standings and statistics provided below and write a highly creative, 
       professional, and engaging "Tactical Newsletter" or "Deep Insight" report. 
       
+      FOCUS ON: Goals scored, goals conceded, goal difference, and points efficiency.
+      IGNORE: Possession statistics or pass accuracy.
+      
       Use a tone that is a mix of a professional sports analyst (like Tifo Football) and a high-stakes esports commentator.
       
       STANDINGS:
-      ${teamStats.sort((a,b) => b.pts - a.pts).map(t => `${t.name}: ${t.pts} pts, ${t.totalGoals} GF, ${t.ga} GA`).join('\n')}
+      ${teamStats.sort((a,b) => b.pts - a.pts).map(t => `${t.name}: ${t.pts} pts, ${t.played} MP, ${t.totalGoals} GF, ${t.ga} GA, ${t.totalGoals - (t.ga || 0)} GD`).join('\n')}
       
       ADDITIONAL DATA:
       - Total Goals: ${teamStats.reduce((acc, t) => acc + t.totalGoals, 0)}
       - Top Scorer: ${teamScorerRace[0]?.name}
-      - Discipline: ${tournamentStats.totalYellowCards} Yellows, ${tournamentStats.totalRedCards} Reds
+      - Avg Goals/Game: ${(teamStats.reduce((acc, t) => acc + t.totalGoals, 0) / (fixtures.filter(f => f.leg1?.status === 'finished').length * 2 || 1)).toFixed(2)}
       
       STRUCTURE:
-      1. THE HIERARCHY: Analyze the title race or top performers.
-      2. TACTICAL TRENDS: Discuss the playstyles based on GF/GA and stats like possession.
-      3. CRITICAL DATA POINT: Highlight a surprising stat or a team exceeding expectations.
-      4. SEASON PROJECTOR: One bold prediction for the next set of fixtures.
+      1. THE HIERARCHY: Analyze the title race based on point efficiency and goal dominance.
+      2. ATTACK VS DEFENSE: Discuss which teams are "Glass Cannons" (high GF, high GA) vs "Steel Walls" (low GA).
+      3. STATISTICAL OUTLIER: Highlight a team with a surprising GD relative to their points.
+      4. PREDICTION: One bold goal-based prediction for the next set of fixtures.
       
       Use Markdown formatting (bolding, headers, lists). Keep it punchy.`;
 
@@ -273,6 +276,17 @@ export function StatsDashboard() {
       .slice(0, 10);
   }, [teamStats]);
 
+  const individualScorerRace = useMemo(() => {
+    return [...players]
+      .filter(p => p.goals > 0)
+      .sort((a, b) => b.goals - a.goals)
+      .slice(0, 10)
+      .map(p => ({
+        ...p,
+        team: teams.find(t => t.id === p.teamId)
+      }));
+  }, [players, teams]);
+
   const teamForm = useMemo(() => {
     return teams.map(team => {
       const form: string[] = [];
@@ -357,13 +371,15 @@ export function StatsDashboard() {
 
   const quadrantData = useMemo(() => {
     return teamStats.map(t => {
+      const gd = t.totalGoals - (t.ga || 0);
       return {
         name: t.name,
         gf: t.totalGoals,
         ga: t.ga || 0,
+        gd: gd,
         played: t.played,
-        possession: t.avgPossession,
-        efficiency: t.totalShots > 0 ? Math.round((t.totalGoals / t.totalShots) * 100) : 0,
+        gfPerMatch: t.played > 0 ? Number((t.totalGoals / t.played).toFixed(2)) : 0,
+        gaPerMatch: t.played > 0 ? Number(((t.ga || 0) / t.played).toFixed(2)) : 0,
         logo: t.logo
       };
     });
@@ -393,9 +409,9 @@ export function StatsDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         {[
           { label: 'Season Goals', value: teamStats.reduce((acc, t) => acc + t.totalGoals, 0), icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-          { label: 'Total Passes', value: teamStats.reduce((acc, t) => acc + t.totalPasses, 0).toLocaleString(), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Matches Played', value: fixtures.reduce((acc, f) => acc + (f.leg1?.status === 'finished' ? 1 : 0) + (f.leg2?.status === 'finished' ? 1 : 0), 0), icon: Activity, color: 'text-purple-500', bg: 'bg-purple-50' },
-          { label: 'Avg Attendance', value: '42.5K', icon: Users, color: 'text-amber-500', bg: 'bg-amber-50' },
+          { label: 'Goals Per Game', value: (teamStats.reduce((acc, t) => acc + t.totalGoals, 0) / Math.max(fixtures.filter(f => f.leg1?.status === 'finished').length + fixtures.filter(f => f.leg2?.status === 'finished').length, 1)).toFixed(2), icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50' },
+          { label: 'Total Matches', value: fixtures.reduce((acc, f) => acc + (f.leg1?.status === 'finished' ? 1 : 0) + (f.leg2?.status === 'finished' ? 1 : 0), 0), icon: Activity, color: 'text-purple-500', bg: 'bg-purple-50' },
+          { label: 'Best Goal Diff', value: `+${Math.max(...teamStats.map(t => t.totalGoals - (t.ga || 0)))}`, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-50' },
         ].map((stat, i) => (
           <motion.div 
             key={i}
@@ -415,17 +431,78 @@ export function StatsDashboard() {
         ))}
       </div>
 
+      {/* League Leaders Spotlight */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
+        <div className="glass-card p-6 border-none bg-white/40 shadow-sm hover:shadow-xl transition-all">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <Zap className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Most Prolific Attack</h3>
+          </div>
+          <div className="space-y-4">
+            {[...teamStats].sort((a,b) => b.totalGoals - a.totalGoals).slice(0, 3).map((team, idx) => (
+              <div key={team.id} className="flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-black text-slate-400">#{idx + 1}</span>
+                  <img src={team.logo} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
+                  <span className="text-xs font-bold uppercase text-slate-700">{team.name}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-black text-slate-900">{team.totalGoals} <span className="text-[10px] text-slate-400 uppercase">Goals</span></span>
+                  <div className="w-16 h-1 rounded-full bg-slate-100 overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500" 
+                      style={{ width: `${(team.totalGoals / Math.max(...teamStats.map(t => t.totalGoals), 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-card p-6 border-none bg-white/40 shadow-sm hover:shadow-xl transition-all">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Shield className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Elite Defensive Wall</h3>
+          </div>
+          <div className="space-y-4">
+            {[...teamStats].sort((a,b) => (a.ga || 0) - (b.ga || 0)).slice(0, 3).map((team, idx) => (
+              <div key={team.id} className="flex items-center justify-between group">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-black text-slate-400">#{idx + 1}</span>
+                  <img src={team.logo} className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
+                  <span className="text-xs font-bold uppercase text-slate-700">{team.name}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-black text-slate-900">{team.ga || 0} <span className="text-[10px] text-slate-400 uppercase">GA</span></span>
+                  <div className="w-16 h-1 rounded-full bg-slate-100 overflow-hidden">
+                    <div 
+                      className="h-full bg-primary" 
+                      style={{ width: `${((team.ga || 0) / Math.max(...teamStats.map(t => t.ga || 1), 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 my-12">
         {/* Tactical Quadrant: Attack vs Defense */}
         <div className="glass-card p-6 sm:p-8 space-y-6 bg-white overflow-hidden group">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Tornado className="w-6 h-6" />
+                <Shield className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Tactical Quadrant</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Offensive vs Defensive Efficiency</p>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Global Net Rating</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Goals Scored vs Conceded</p>
               </div>
             </div>
           </div>
@@ -436,16 +513,16 @@ export function StatsDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis 
                   dataKey="gf" 
-                  name="Goals For" 
-                  label={{ value: 'Goals For (Attack)', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 900 }}
+                  name="Goals Scored" 
+                  label={{ value: 'Total Goals Scored', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 900 }}
                   type="number"
                   fontSize={10}
                   stroke="#94a3b8"
                 />
                 <YAxis 
                   dataKey="ga" 
-                  name="Goals Against" 
-                  label={{ value: 'Goals Against (Defense)', angle: -90, position: 'insideLeft', fontSize: 10, fontWeight: 900 }}
+                  name="Goals Conceded" 
+                  label={{ value: 'Total Goals Conceded', angle: -90, position: 'insideLeft', fontSize: 10, fontWeight: 900 }}
                   type="number"
                   fontSize={10}
                   stroke="#94a3b8"
@@ -459,12 +536,13 @@ export function StatsDashboard() {
                       return (
                         <div className="bg-white border border-slate-100 shadow-xl p-3 rounded-2xl">
                           <div className="flex items-center gap-2 mb-2">
-                             <img src={data.logo} className="w-5 h-5" />
+                             <img src={data.logo} className="w-5 h-5 object-contain" referrerPolicy="no-referrer" />
                              <p className="text-xs font-black uppercase text-slate-900">{data.name}</p>
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[10px] text-slate-500 font-bold uppercase">Attack: {data.gf} Goals</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase">Defense: {data.ga} GA</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">Scored: {data.gf}</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">Conceded: {data.ga}</p>
+                            <p className="text-[10px] text-emerald-500 font-black uppercase">Goal Diff: {data.gd > 0 ? `+${data.gd}` : data.gd}</p>
                           </div>
                         </div>
                       );
@@ -474,27 +552,27 @@ export function StatsDashboard() {
                 />
                 <Scatter name="Teams" data={quadrantData}>
                    {quadrantData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3D195B' : '#00FF85'} />
+                    <Cell key={`cell-${index}`} fill={entry.gd > 0 ? '#00FF85' : '#3D195B'} />
                   ))}
                 </Scatter>
               </ScatterChart>
             </ResponsiveContainer>
           </div>
           <div className="grid grid-cols-2 gap-4 text-[9px] font-black uppercase tracking-widest text-center">
-             <div className="p-2 border border-slate-100 rounded-lg bg-emerald-50 text-emerald-600">Elite Dominators</div>
-             <div className="p-2 border border-slate-100 rounded-lg bg-orange-50 text-orange-600">High Risk Attackers</div>
+             <div className="p-2 border border-slate-100 rounded-xl bg-emerald-50 text-emerald-600">Goal Dominators</div>
+             <div className="p-2 border border-slate-100 rounded-xl bg-slate-50 text-slate-600">Defensive Struggles</div>
           </div>
         </div>
 
-        {/* Possession vs Efficiency */}
+        {/* Goals Efficiency: Scored vs Conceded */}
         <div className="glass-card p-6 sm:p-8 space-y-6 bg-white group">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
               <Zap className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Conversion Matrix</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Possession vs Goal Efficiency</p>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Net Rating Matrix</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Goals Scored vs Conceded Per Match</p>
             </div>
           </div>
 
@@ -503,21 +581,22 @@ export function StatsDashboard() {
               <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis 
-                  dataKey="possession" 
-                  name="Possession" 
-                  label={{ value: 'Avg Possession %', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 900 }}
+                  dataKey="gfPerMatch" 
+                  name="Goals/Match" 
+                  label={{ value: 'Goals Scored/Match', position: 'insideBottom', offset: -10, fontSize: 10, fontWeight: 900 }}
                   type="number"
-                  domain={[30, 70]}
+                  domain={[0, 'auto']}
                   fontSize={10}
                   stroke="#94a3b8"
                 />
                 <YAxis 
-                  dataKey="efficiency" 
-                  name="Efficiency" 
-                  label={{ value: 'Conversion Rate %', angle: -90, position: 'insideLeft', fontSize: 10, fontWeight: 900 }}
+                  dataKey="gaPerMatch" 
+                  name="GA/Match" 
+                  label={{ value: 'Goals Conceded/Match', angle: -90, position: 'insideLeft', fontSize: 10, fontWeight: 900 }}
                   type="number"
                   fontSize={10}
                   stroke="#94a3b8"
+                  reversed
                 />
                 <Tooltip 
                   cursor={{ strokeDasharray: '3 3' }} 
@@ -527,8 +606,8 @@ export function StatsDashboard() {
                       return (
                         <div className="bg-white border border-slate-100 shadow-xl p-3 rounded-2xl">
                           <p className="text-xs font-black uppercase text-slate-900 mb-2">{data.name}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase">Control: {data.possession}%</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase">Lethality: {data.efficiency}%</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">Attack: {data.gfPerMatch} G/M</p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase">Defense: {data.gaPerMatch} G/M</p>
                         </div>
                       );
                     }
@@ -537,7 +616,7 @@ export function StatsDashboard() {
                 />
                 <Scatter name="Efficiency" data={quadrantData}>
                    {quadrantData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.efficiency > 20 ? '#F97316' : '#3B82F6'} />
+                    <Cell key={`cell-${index}`} fill={entry.gfPerMatch > entry.gaPerMatch ? '#00FF85' : '#FB923C'} />
                   ))}
                 </Scatter>
               </ScatterChart>
@@ -674,51 +753,125 @@ export function StatsDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Top Scorers */}
-        <div className="lg:col-span-2 space-y-6">
-          <div id="golden-boot-section" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Individual Golden Boot */}
+          <div id="individual-golden-boot" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white border-t-8 border-amber-500">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                   < Award className="w-6 h-6 text-amber-500" />
+                <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center shadow-lg shadow-amber-200">
+                   <Target className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Golden Boot Race (Team)</h3>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">Golden Boot Race</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Individual Top Scorers</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => handleGeneratePost('golden-boot-section', { 
-                    title: 'Golden Boot (Team Rankings)', 
-                    topTeams: teamScorerRace.map(t => ({ team: t.name, goals: t.totalGoals })) 
-                  })}
-                  disabled={generatingPostId === 'golden-boot-section'}
-                  className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
+                  onClick={() => {
+                    setGraphicData({ 
+                      type: 'pl-golden-boot',
+                      data: individualScorerRace.slice(0, 5)
+                    });
+                  }}
+                  className="rounded-full border-slate-200 text-slate-500 hover:text-amber-600 hover:border-amber-200 font-black uppercase tracking-widest text-[10px] h-9 px-4 transition-all"
                 >
-                  {generatingPostId === 'golden-boot-section' ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
-                  AI Post
+                  <Layout className="w-3.5 h-3.5 mr-2" />
+                  Social Graphic
                 </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {individualScorerRace.slice(0, 6).map((player, i) => (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  key={player.id}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-3xl transition-all border group",
+                    i === 0 ? "bg-slate-900 border-none shadow-xl scale-[1.02]" : "bg-white border-slate-100 hover:border-amber-200 hover:shadow-lg"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className={cn(
+                      "text-xl font-black italic w-6 text-center",
+                      i === 0 ? "text-amber-500" : "text-slate-200"
+                    )}>{i + 1}</span>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 p-2 relative">
+                      <img 
+                        src={player.team?.logo} 
+                        className="w-full h-full object-contain" 
+                        referrerPolicy="no-referrer" 
+                      />
+                      {i === 0 && (
+                        <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-1 shadow-lg">
+                          <Trophy className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className={cn("font-black uppercase tracking-tight leading-tight", i === 0 ? "text-white" : "text-slate-900")}>
+                        {player.name}
+                      </p>
+                      <p className={cn("text-[8px] font-black uppercase tracking-widest", i === 0 ? "text-slate-400" : "text-slate-400")}>
+                        {player.team?.name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex items-center gap-3">
+                    {/* Tiny Form Dots */}
+                    <div className="hidden sm:flex gap-1">
+                      {(player.goalHistory || [0, 0, 0]).slice(0, 3).map((g, gi) => (
+                        <div 
+                          key={gi} 
+                          className={cn(
+                            "w-1.5 h-4 rounded-full",
+                            g > 0 ? "bg-amber-500" : i === 0 ? "bg-white/10" : "bg-slate-100"
+                          )} 
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <p className={cn("text-2xl font-black italic leading-none", i === 0 ? "text-amber-500" : "text-slate-900")}>{player.goals}</p>
+                      <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Goals</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          <div id="team-golden-boot" className="glass-card p-6 sm:p-8 space-y-6 relative bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                   < Shield className="w-6 h-6 text-slate-400" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight italic">Club Goals Ranking</h3>
+              </div>
+              <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => {
-                    const data = teamScorerRace.map(t => ({ 
-                      id: t.id, 
-                      name: t.name, 
-                      goals: t.totalGoals, 
-                      teamName: 'Total Team Goals' 
-                    }));
-                    setGraphicData({ type: 'golden-boot', data });
-                  }}
+                  onClick={() => handleGeneratePost('team-golden-boot', { 
+                    title: 'Club Goal Rankings', 
+                    topTeams: teamScorerRace.map(t => ({ team: t.name, goals: t.totalGoals })) 
+                  })}
+                  disabled={generatingPostId === 'team-golden-boot'}
                   className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-primary border-slate-200"
                 >
-                  <Eye className="w-3 h-3 mr-2" />
-                  View Graphic
+                  {generatingPostId === 'team-golden-boot' ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Sparkles className="w-3 h-3 mr-2" />}
+                  AI Post
                 </Button>
               </div>
             </div>
 
             <div className="space-y-3">
-              {teamScorerRace.length > 0 ? teamScorerRace.map((team, i) => {
+              {teamScorerRace.length > 0 ? teamScorerRace.slice(0, 5).map((team, i) => {
                 return (
                   <motion.div 
                     initial={{ opacity: 0, x: -20 }}

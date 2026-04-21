@@ -46,20 +46,20 @@ export function AIOracle() {
       const prompt = `Analyze an upcoming eFootball match: ${homeTeam.name} vs ${awayTeam.name}.
       
       HOME TEAM DATA (Season): 
-      - Played: ${homeTeam.played}, GF: ${homeTeam.gf}, GA: ${homeTeam.ga}, Pts: ${homeTeam.pts}
-      - Playstyle: ${homeTeam.playstyle || 'Balanced'}
+      - Played: ${homeTeam.played}, GF: ${homeTeam.gf}, GA: ${homeTeam.ga}, GD: ${homeTeam.gf - (homeTeam.ga || 0)}, Pts: ${homeTeam.pts}
       
       AWAY TEAM DATA (Season):
-      - Played: ${awayTeam.played}, GF: ${awayTeam.gf}, GA: ${awayTeam.ga}, Pts: ${awayTeam.pts}
-      - Playstyle: ${awayTeam.playstyle || 'Counter-Attack'}
+      - Played: ${awayTeam.played}, GF: ${awayTeam.gf}, GA: ${awayTeam.ga}, GD: ${awayTeam.gf - (awayTeam.ga || 0)}, Pts: ${awayTeam.pts}
       
-      Tournament History: All matches are two-legged. This is Leg ${fixture.round % 2 === 0 ? '2' : '1'}.
+      Tournament History: All matches are two-legged.
       
       The statistical model predicts a score of ${localPrediction.homeScore}-${localPrediction.awayScore}.
       
       TASK:
-      Provide a highly professional, clinical, yet engaging tactical reasoning (MAX 150 characters) 
-      for why this match might go this way. Focus on "tactical transitions", "clinical finishing", or "defensive shape". 
+      Provide a highly professional, clinical tactical reasoning (MAX 150 characters) 
+      for why this match might go this way. 
+      FOCUS ON: Goal scoring trends, defensive solidity, and goal difference.
+      IGNORE: Possession, passes, or technical ball retention stats.
       Keep it strictly as a string without quotes.`;
 
       const { text } = await generateText({

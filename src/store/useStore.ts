@@ -35,6 +35,8 @@ export interface Player {
   yellowCards: number;
   redCards: number;
   passes?: number;
+  goalHistory?: number[]; // Goals in last matches
+  lastTeams?: string[]; // Teams played against recently
 }
 
 export interface FixtureLeg {
@@ -254,7 +256,8 @@ export const useStore = create<TournamentState>()(
         // Reset player stats
         const resetPlayers = state.players.map(p => ({
           ...p,
-          goals: 0, assists: 0, yellowCards: 0, redCards: 0, passes: 0
+          goals: 0, assists: 0, yellowCards: 0, redCards: 0, passes: 0,
+          goalHistory: [], lastTeams: []
         }));
 
         const newSeason = state.season + 1;

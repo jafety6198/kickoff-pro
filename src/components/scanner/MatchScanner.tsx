@@ -138,26 +138,55 @@ export function MatchScanner() {
 
       updateFixtureScore(fixture.id, legToUpdate, homeScore, awayScore, stats);
 
-      // Update player goals
+      // Update player goals and history
+      const opponentTeam = homeTeam.id === mapping.homeTeamId ? awayTeam.name : homeTeam.name;
+      
+      // Group goals by player for this match
+      const scorersThisMatch: Record<string, { count: number, teamId: string, name: string }> = {};
       result.scorers.forEach(scorer => {
         const teamId = scorer.team === 'home' ? mapping.homeTeamId : mapping.awayTeamId;
-        // Try to find existing player by name in that team
-        const player = useStore.getState().players.find(p => p.name.toLowerCase() === scorer.name.toLowerCase() && p.teamId === teamId);
-        
-        if (player) {
-          useStore.getState().updatePlayerStats(player.id, { goals: player.goals + 1 });
-        } else {
-          // If player doesn't exist, we could add them automatically or just ignore
-          // For now, let's add them to ensure stats are tracked
-          useStore.getState().addPlayer({
-            name: scorer.name,
-            teamId: teamId,
-            goals: 1,
-            assists: 0,
-            yellowCards: 0,
-            redCards: 0
-          });
+        const key = `${scorer.name.toLowerCase()}_${teamId}`;
+        if (!scorersThisMatch[key]) {
+          scorersThisMatch[key] = { count: 0, teamId, name: scorer.name };
         }
+        scorersThisMatch[key].count++;
+      });
+
+      // Update all players in the tournament (those who didn't score get a 0 in history)
+      const allPlayers = useStore.getState().players;
+      allPlayers.forEach(p => {
+        // Only update players from the two teams involved
+        if (p.teamId === mapping.homeTeamId || p.teamId === mapping.awayTeamId) {
+          const key = `${p.name.toLowerCase()}_${p.teamId}`;
+          const goalsScored = scorersThisMatch[key]?.count || 0;
+          const oppName = p.teamId === mapping.homeTeamId ? awayTeam.name : homeTeam.name;
+          
+          const newHistory = [goalsScored, ...(p.goalHistory || [])].slice(0, 5);
+          const newOpponents = [oppName, ...(p.lastTeams || [])].slice(0, 5);
+
+          useStore.getState().updatePlayerStats(p.id, { 
+            goals: p.goals + goalsScored,
+            goalHistory: newHistory,
+            lastTeams: newOpponents
+          });
+          
+          // Remove from grouping so we don't add them as "new" later
+          delete scorersThisMatch[key];
+        }
+      });
+
+      // Any remaining in scorersThisMatch are new players
+      Object.values(scorersThisMatch).forEach(s => {
+        useStore.getState().addPlayer({
+          name: s.name,
+          teamId: s.teamId,
+          goals: s.count,
+          assists: 0,
+          yellowCards: 0,
+          redCards: 0,
+          goalHistory: [s.count],
+          lastTeams: [s.teamId === mapping.homeTeamId ? awayTeam.name : homeTeam.name]
+        });
       });
 
       toast.success('Match results and player stats updated successfully');

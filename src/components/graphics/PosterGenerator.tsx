@@ -32,6 +32,7 @@ const templates = [
   { id: 'pl-power-form', name: 'Power Form Recap', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'pl-stats', name: 'PL Match Stats', color: 'bg-[#3D195B]', accent: '#00FF85' },
   { id: 'pl-squad', name: 'PL Squad', color: 'bg-[#3D195B]', accent: '#00FF85' },
+  { id: 'pl-golden-boot', name: 'Official Golden Boot', color: 'bg-white', accent: '#3D195B' },
   { id: 'big-game', name: 'Big Game', color: 'bg-[#0a0a0a]', accent: 'yellow' },
   { id: 'minimal', name: 'Gameday Minimal', color: 'from-blue-400 to-white', accent: 'blue' },
   { id: 'gritty', name: 'Gritty Derby', color: 'bg-[#1a1a1a]', accent: 'red' },
@@ -40,7 +41,7 @@ const templates = [
 ];
 
 export function PosterGenerator({ selectedFixture: externalFixture, templateId }: { selectedFixture?: Fixture, templateId?: string }) {
-  const { fixtures: storeFixtures, teams: storeTeams, tournamentName } = useStore();
+  const { fixtures: storeFixtures, teams: storeTeams, tournamentName, players } = useStore();
   const [selectedFixture, setSelectedFixture] = useState<any>(externalFixture || null);
   const [selectedRound, setSelectedRound] = useState<number>(1);
   const [template, setTemplate] = useState(templates.find(t => t.id === templateId) || templates[0]);
@@ -1451,6 +1452,138 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                   <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Official League Result</p>
                   <p className="text-white text-xl font-black uppercase tracking-tighter">{tournamentName} • Matchday {selectedFixture.round}</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        );
+
+        case 'pl-golden-boot':
+        const topScorers = [...players]
+          .sort((a, b) => b.goals - a.goals)
+          .slice(0, 5)
+          .map(p => ({
+            ...p,
+            team: storeTeams.find(t => t.id === p.teamId)
+          }));
+
+        return (
+          <div 
+            ref={posterRef}
+            className="w-[700px] h-[850px] bg-white relative flex flex-col overflow-hidden font-sans shadow-2xl"
+          >
+            {/* Background Polish pattern */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3D195B 2px, transparent 2px)', backgroundSize: '30px 30px' }} />
+            
+            {/* Header */}
+            <div className="pt-16 pb-8 px-12 bg-[#3D195B] text-white relative z-10">
+              <div className="flex items-center justify-between mb-2">
+                 <Badge className="bg-[#00FF85] text-[#3D195B] font-black uppercase tracking-widest text-[10px] border-none shadow-lg">
+                    Individual Excellence
+                 </Badge>
+                 <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-[#00FF85]" />
+                 </div>
+              </div>
+              <h1 className="text-5xl font-black italic uppercase tracking-tighter leading-none">
+                Golden Boot Race
+              </h1>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#00FF85] mt-2">
+                Official Goal Scoring Leaderboard • {tournamentName}
+              </p>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 px-12 py-10 space-y-4 relative z-10 bg-slate-50">
+              {topScorers.length > 0 ? topScorers.map((player, idx) => (
+                <div 
+                  key={player.id} 
+                  className={cn(
+                    "flex items-center justify-between p-5 rounded-[2rem] border transition-all shadow-sm",
+                    idx === 0 ? "bg-[#3D195B] text-white border-none shadow-xl scale-[1.02]" : "bg-white text-slate-900 border-slate-100"
+                  )}
+                >
+                  <div className="flex items-center gap-6">
+                    <span className={cn(
+                      "text-3xl font-black italic w-10",
+                      idx === 0 ? "text-[#00FF85]" : "text-slate-200"
+                    )}>{idx + 1}</span>
+                    
+                    <div className="w-14 h-14 rounded-2xl bg-white/10 p-2 flex items-center justify-center border border-white/5 shadow-inner">
+                      <img 
+                        src={player.team?.logo} 
+                        className="w-full h-full object-contain" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className={cn(
+                        "text-xl font-black uppercase tracking-tight",
+                        idx === 0 ? "text-[#00FF85]" : "text-slate-900"
+                      )}>{player.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-widest",
+                          idx === 0 ? "text-white/60" : "text-slate-400"
+                        )}>{player.team?.name}</span>
+                        {idx === 0 && (
+                          <div className="px-2 py-0.5 rounded-full bg-[#00FF85]/20 text-[#00FF85] text-[7px] font-black uppercase">League Leader</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-10">
+                    {/* Recent Form (Last 3) */}
+                    <div className="hidden sm:flex flex-col items-end gap-1">
+                       <p className={cn("text-[8px] font-black uppercase tracking-widest mb-1", idx === 0 ? "text-white/40" : "text-slate-300")}>Goal History</p>
+                       <div className="flex gap-1.5">
+                          {(player.goalHistory || [0,0,0]).slice(0, 3).map((goals, i) => (
+                            <div 
+                              key={i}
+                              className={cn(
+                                "w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black",
+                                goals > 0 
+                                  ? "bg-[#00FF85] text-[#3D195B]" 
+                                  : idx === 0 ? "bg-white/5 text-white/20" : "bg-slate-100 text-slate-300"
+                              )}
+                              title={player.lastTeams?.[i]}
+                            >
+                              {goals}
+                            </div>
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className={cn(
+                        "text-5xl font-black italic leading-none block",
+                        idx === 0 ? "text-[#00FF85]" : "text-[#3D195B]"
+                      )}>{player.goals}</span>
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-widest",
+                        idx === 0 ? "text-white/40" : "text-slate-400"
+                      )}>Goals Scored</span>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-4">
+                   <Users className="w-20 h-20 opacity-10" />
+                   <p className="font-black uppercase tracking-[0.2em] text-sm">Searching for scorers</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-10 bg-white border-t border-slate-100 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 grayscale opacity-30">
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-200" />
+                  <div className="w-8 h-8 rounded-lg bg-[#00FF85] border border-slate-200" />
+                  <span className="font-black italic text-sm tracking-tighter">PREMIER SERIES</span>
+                </div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-300 italic">Official Graphic • Created via Studio</p>
               </div>
             </div>
           </div>

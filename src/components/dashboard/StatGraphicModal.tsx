@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 interface StatGraphicModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'golden-boot' | 'power-rankings' | 'season-highs' | 'team-stats' | 'relegation' | 'form' | 'underdog' | 'match-focus' | 'season-recap' | 'card-stats' | 'tactical-clash' | 'league-pulse' | 'power-form';
+  type: 'golden-boot' | 'pl-golden-boot' | 'power-rankings' | 'season-highs' | 'team-stats' | 'relegation' | 'form' | 'underdog' | 'match-focus' | 'season-recap' | 'card-stats' | 'tactical-clash' | 'league-pulse' | 'power-form';
   data?: any;
 }
 
@@ -271,6 +271,124 @@ export function StatGraphicModal({ isOpen, onClose, type, data }: StatGraphicMod
                    </div>
                 </div>
              </div>
+          </div>
+        );
+
+      case 'pl-golden-boot':
+        return (
+          <div className="w-full h-full bg-white relative flex flex-col overflow-hidden font-sans">
+            {/* Background Polish pattern */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3D195B 2px, transparent 2px)', backgroundSize: '30px 30px' }} />
+            
+            {/* Header */}
+            <div className="pt-16 pb-8 px-12 bg-[#3D195B] text-white relative z-10">
+              <div className="flex items-center justify-between mb-2">
+                 <Badge className="bg-[#00FF85] text-[#3D195B] font-black uppercase tracking-widest text-[10px] border-none shadow-lg">
+                    Individual Excellence
+                 </Badge>
+                 <div className="flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-[#00FF85]" />
+                 </div>
+              </div>
+              <h1 className="text-5xl font-black italic uppercase tracking-tighter leading-none">
+                Golden Boot Race
+              </h1>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#00FF85] mt-2">
+                Official Goal Scoring Leaderboard • {tournamentName}
+              </p>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 px-12 py-10 space-y-3 relative z-10 bg-slate-50 overflow-hidden">
+              {data?.slice(0, 5).map((player: any, idx: number) => (
+                <motion.div 
+                  key={player.id} 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-[1.5rem] border transition-all shadow-sm",
+                    idx === 0 ? "bg-[#3D195B] text-white border-none shadow-xl scale-[1.01]" : "bg-white text-slate-900 border-slate-100"
+                  )}
+                >
+                  <div className="flex items-center gap-6">
+                    <span className={cn(
+                      "text-2xl font-black italic w-8",
+                      idx === 0 ? "text-[#00FF85]" : "text-slate-200"
+                    )}>{idx + 1}</span>
+                    
+                    <div className="w-12 h-12 rounded-xl bg-white/10 p-2 flex items-center justify-center border border-white/5 shadow-inner">
+                      <img 
+                        src={player.team?.logo} 
+                        className="w-full h-full object-contain" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className={cn(
+                        "text-lg font-black uppercase tracking-tight leading-tight",
+                        idx === 0 ? "text-[#00FF85]" : "text-slate-900"
+                      )}>{player.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-[8px] font-black uppercase tracking-widest",
+                          idx === 0 ? "text-white/60" : "text-slate-400"
+                        )}>{player.team?.name}</span>
+                        {idx === 0 && (
+                          <div className="px-2 py-0.5 rounded-full bg-[#00FF85]/20 text-[#00FF85] text-[6px] font-black uppercase">Goal King</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-8">
+                    {/* Recent Form (Last 3) */}
+                    <div className="hidden sm:flex flex-col items-end gap-1">
+                       <p className={cn("text-[7px] font-black uppercase tracking-widest mb-0.5", idx === 0 ? "text-white/40" : "text-slate-300")}>Recent Form</p>
+                       <div className="flex gap-1">
+                          {(player.goalHistory || [0,0,0]).slice(0, 3).map((goals: number, i: number) => (
+                            <div 
+                              key={i}
+                              className={cn(
+                                "w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black",
+                                goals > 0 
+                                  ? "bg-[#00FF85] text-[#3D195B]" 
+                                  : idx === 0 ? "bg-white/5 text-white/20" : "bg-slate-100 text-slate-300"
+                              )}
+                            >
+                              {goals}
+                            </div>
+                          ))}
+                       </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className={cn(
+                        "text-4xl font-black italic leading-none block",
+                        idx === 0 ? "text-[#00FF85]" : "text-[#3D195B]"
+                      )}>{player.goals}</span>
+                      <span className={cn(
+                        "text-[9px] font-black uppercase tracking-widest",
+                        idx === 0 ? "text-white/40" : "text-slate-400"
+                      )}>Goals</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="px-12 py-8 bg-white border-t border-slate-100 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 opacity-30 grayscale items-center text-black">
+                  <div className="w-6 h-6 rounded-md bg-slate-900" />
+                  <div className="w-6 h-6 rounded-md bg-[#00FF85]" />
+                  <span className="font-black italic text-xs tracking-tighter">PREMIER DATA</span>
+                </div>
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-300 italic">Tournament Broadcast • Season {season} Recap</p>
+              </div>
+            </div>
           </div>
         );
 
