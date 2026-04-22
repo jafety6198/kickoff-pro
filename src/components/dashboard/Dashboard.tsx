@@ -17,7 +17,9 @@ import {
   Edit3,
   Sparkles,
   Loader2,
-  Zap
+  Zap,
+  Newspaper,
+  Cpu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +32,8 @@ import { MatchManagementModal } from './MatchManagementModal';
 import { SquadManagementModal } from './SquadManagementModal';
 import { TeamManagementModal } from './TeamManagementModal';
 import { StatsDashboard } from './StatsDashboard';
+import { TacticalHub } from './TacticalHub';
+import { AILeagueGraphicsEngine } from './AILeagueGraphicsEngine';
 import { AIOracle } from './AIOracle';
 import { Badge } from '@/components/ui/badge';
 import { calculateLocalPrediction } from '@/lib/predictor';
@@ -341,7 +345,7 @@ const PROMOTED_TEAMS = [
 
 export function Dashboard() {
   const { teams, fixtures, updateFixtureScore, role, resetTournament, setStep, setRole, nextSeason, currentProfileId } = useStore();
-  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'squads' | 'stats' | 'oracle' | 'graphics'>('standings');
+  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'tactical-hub' | 'stats' | 'oracle' | 'graphics' | 'graphics-engine'>('standings');
   const [selectedTeamForSquad, setSelectedTeamForSquad] = useState<Team | null>(null);
   const [selectedTeamForProfile, setSelectedTeamForProfile] = useState<Team | null>(null);
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
@@ -409,10 +413,11 @@ export function Dashboard() {
           {[
             { id: 'standings', label: 'Standings', icon: LayoutDashboard },
             { id: 'fixtures', label: 'Fixtures', icon: Calendar },
-            { id: 'squads', label: 'Squads', icon: Users },
+            { id: 'tactical-hub', label: 'Tactical Hub', icon: Newspaper },
             { id: 'stats', label: 'Stats', icon: BarChart3 },
             { id: 'oracle', label: 'AI Oracle', icon: Sparkles, adminOnly: true },
-            { id: 'graphics', label: 'Graphics', icon: ImageIcon },
+            { id: 'graphics', label: 'Fast Posters', icon: ImageIcon },
+            { id: 'graphics-engine', label: 'Graphic Engine', icon: Cpu },
           ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -741,97 +746,20 @@ export function Dashboard() {
             </motion.div>
           )}
 
-          {activeTab === 'squads' && (
+          {activeTab === 'tactical-hub' && (
             <motion.div
-              key="squads"
+              key="tactical-hub"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6 sm:space-y-8"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-3xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter italic">Team Squads</h2>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 w-fit">
-                  {role === 'admin' ? 'Management Mode' : 'View Mode'}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {teams.map((team) => (
-                  <motion.div 
-                    key={team.id}
-                    whileHover={{ y: -5 }}
-                    className="glass-card p-6 space-y-4 relative group overflow-hidden"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <img src={team.logo} className="w-10 h-10 object-contain" referrerPolicy="no-referrer" />
-                        <div>
-                          <h3 className="font-black text-slate-900 uppercase tracking-tight">{team.name}</h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            {team.formation || 'No Formation Set'}
-                          </p>
-                        </div>
-                      </div>
-                      {role === 'admin' && (
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={() => setSelectedTeamForSquad(team)}
-                          className="rounded-xl hover:bg-primary/10 hover:text-primary"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="aspect-video rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden relative">
-                      {team.squadImage ? (
-                        <img src={team.squadImage} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                          <Users className="w-8 h-8 mb-2 opacity-20" />
-                          <p className="text-[8px] font-black uppercase tracking-widest">No Squad Image</p>
-                        </div>
-                      )}
-                      {team.collectiveStrength && (
-                        <div className="absolute bottom-3 right-3 bg-primary text-white px-3 py-1 rounded-lg text-[10px] font-black italic shadow-lg">
-                          CS: {team.collectiveStrength}
-                        </div>
-                      )}
-                    </div>
-
-                    {team.playstyle && (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none text-[8px] font-black uppercase tracking-widest">
-                          {team.playstyle}
-                        </Badge>
-                      </div>
-                    )}
-
-                    {role === 'admin' && !team.squadImage && (
-                      <Button 
-                        onClick={() => setSelectedTeamForSquad(team)}
-                        className="w-full h-10 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest"
-                      >
-                        Upload Squad
-                      </Button>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-
-              {selectedTeamForSquad && (
-                <SquadManagementModal 
-                  team={selectedTeamForSquad}
-                  isOpen={!!selectedTeamForSquad}
-                  onClose={() => setSelectedTeamForSquad(null)}
-                />
-              )}
+              <TacticalHub />
             </motion.div>
           )}
 
           {activeTab === 'oracle' && <AIOracle />}
+          {activeTab === 'graphics-engine' && <AILeagueGraphicsEngine />}
           {activeTab === 'graphics' && <PosterGenerator />}
           {activeTab === 'stats' && <StatsDashboard />}
         </AnimatePresence>

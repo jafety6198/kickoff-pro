@@ -8,6 +8,7 @@ export type TournamentMode = 'league' | 'knockout' | null;
 export interface Team {
   id: string;
   name: string;
+  managerName?: string;
   handleName?: string;
   logo: string;
   played: number;
@@ -96,8 +97,18 @@ export interface Profile {
   teams: Team[];
   fixtures: Fixture[];
   players: Player[];
+  newsItems?: NewsItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  type: 'newsletter' | 'romano';
+  tags?: string[];
 }
 
 interface TournamentState {
@@ -114,6 +125,7 @@ interface TournamentState {
   teams: Team[];
   fixtures: Fixture[];
   players: Player[];
+  newsItems: NewsItem[];
   
   // Actions
   setRole: (role: Role) => void;
@@ -133,6 +145,8 @@ interface TournamentState {
   setTeams: (teams: Team[]) => void;
   setFixtures: (fixtures: Fixture[]) => void;
   setPlayers: (players: Player[]) => void;
+  setNewsItems: (items: NewsItem[]) => void;
+  addNewsItem: (item: NewsItem) => void;
   updateFixtureScore: (fixtureId: string, leg: 1 | 2, homeScore: number, awayScore: number, stats?: FixtureLeg['stats']) => void;
   updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   updateTeam: (teamId: string, updates: Partial<Team>) => void;
@@ -158,6 +172,7 @@ export const useStore = create<TournamentState>()(
       teams: [],
       fixtures: [],
       players: [],
+      newsItems: [],
 
       setRole: (role) => set({ role }),
       setStep: (step) => set({ step }),
@@ -172,6 +187,7 @@ export const useStore = create<TournamentState>()(
           teams: [],
           fixtures: [],
           players: [],
+          newsItems: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -185,6 +201,7 @@ export const useStore = create<TournamentState>()(
           teams: [],
           fixtures: [],
           players: [],
+          newsItems: [],
           step: 'editor'
         };
       }),
@@ -205,6 +222,7 @@ export const useStore = create<TournamentState>()(
           teams: profile.teams,
           fixtures: profile.fixtures,
           players: profile.players,
+          newsItems: profile.newsItems || [],
           step: nextStep
         };
       }),
@@ -232,6 +250,7 @@ export const useStore = create<TournamentState>()(
               teams: state.teams,
               fixtures: state.fixtures,
               players: state.players,
+              newsItems: state.newsItems,
               updatedAt: new Date().toISOString()
             };
           }
@@ -260,6 +279,10 @@ export const useStore = create<TournamentState>()(
           goalHistory: [], lastTeams: []
         }));
 
+        // Reset news for new season to keep it fresh? 
+        // Actually, maybe keep archive but start fresh count.
+        const resetNews: NewsItem[] = [];
+
         const newSeason = state.season + 1;
         const newFixtures = generateRoundRobinFixtures(allTeams);
 
@@ -271,6 +294,7 @@ export const useStore = create<TournamentState>()(
               teams: allTeams,
               fixtures: newFixtures,
               players: resetPlayers,
+              newsItems: resetNews,
               updatedAt: new Date().toISOString()
             };
           }
@@ -283,6 +307,7 @@ export const useStore = create<TournamentState>()(
           teams: allTeams,
           fixtures: newFixtures,
           players: resetPlayers,
+          newsItems: resetNews,
           step: 'dashboard'
         };
       }),
@@ -300,6 +325,14 @@ export const useStore = create<TournamentState>()(
       },
       setPlayers: (players) => {
         set({ players });
+        get().saveProfile();
+      },
+      setNewsItems: (newsItems) => {
+        set({ newsItems });
+        get().saveProfile();
+      },
+      addNewsItem: (item) => {
+        set((state) => ({ newsItems: [item, ...state.newsItems] }));
         get().saveProfile();
       },
       
