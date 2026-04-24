@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useStore, Team, Fixture, ScoutingReport } from '@/store/useStore';
 import { calculateStandings } from '@/lib/tournament-engine';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -213,7 +213,11 @@ export function TacticalTeamHub() {
       const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
 
-      const ai = new GoogleGenAI({ apiKey });
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        generationConfig: { responseMimeType: 'application/json' }
+      });
 
       const prompt = `
         As a Senior Tactical Scout, analyze the following football team: ${selectedTeam.name}.
@@ -235,13 +239,8 @@ export function TacticalTeamHub() {
         Make the tone professional yet energetic. Ensure Swahili vibes are authentic.
       `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        config: { responseMimeType: 'application/json' }
-      });
-      
-      const reportText = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const result = await model.generateContent(prompt);
+      const reportText = result.response.text();
       const report = JSON.parse(reportText);
       
       setReportData(report);

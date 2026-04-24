@@ -30,6 +30,7 @@ import { format } from 'date-fns';
 import { TacticalHub } from './TacticalHub';
 import { TacticalTeamHub } from './TacticalTeamHub';
 import { AILeagueGraphicsEngine } from './AILeagueGraphicsEngine';
+import { PosterGenerator } from '../graphics/PosterGenerator';
 import { AIOracle } from './AIOracle';
 import { MatchManagementModal } from './MatchManagementModal';
 import { SquadManagementModal } from './SquadManagementModal';
@@ -343,7 +344,7 @@ const PROMOTED_TEAMS = [
 
 export function Dashboard() {
   const { teams, fixtures, updateFixtureScore, role, resetTournament, setStep, setRole, nextSeason, currentProfileId } = useStore();
-  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'tactical-hub' | 'team-hub' | 'stats' | 'oracle' | 'graphics-engine'>('standings');
+  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'tactical-hub' | 'team-hub' | 'stats' | 'oracle' | 'graphics-engine' | 'graphics'>('standings');
   const [selectedTeamForSquad, setSelectedTeamForSquad] = useState<Team | null>(null);
   const [selectedTeamForProfile, setSelectedTeamForProfile] = useState<Team | null>(null);
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
@@ -415,6 +416,7 @@ export function Dashboard() {
             { id: 'team-hub', label: 'Tactical Hub', icon: Users },
             { id: 'stats', label: 'Leagues Stats', icon: BarChart3 },
             { id: 'oracle', label: 'AI Oracle', icon: Sparkles, adminOnly: true },
+            { id: 'graphics', label: 'Fast Posters', icon: ImageIcon },
             { id: 'graphics-engine', label: 'Graphic Engine', icon: Cpu },
           ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
             const Icon = item.icon;
@@ -499,9 +501,9 @@ export function Dashboard() {
         {[
           { id: 'standings', icon: LayoutDashboard },
           { id: 'fixtures', icon: Calendar },
-          { id: 'squads', icon: Users },
+          { id: 'tactical-hub', icon: Newspaper },
+          { id: 'team-hub', icon: Users },
           { id: 'stats', icon: BarChart3 },
-          { id: 'oracle', icon: Sparkles, adminOnly: true },
           { id: 'graphics', icon: ImageIcon },
         ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
           const Icon = item.icon;
@@ -768,6 +770,7 @@ export function Dashboard() {
 
           {activeTab === 'oracle' && <AIOracle />}
           {activeTab === 'graphics-engine' && <AILeagueGraphicsEngine />}
+          {activeTab === 'graphics' && <PosterGenerator />}
           {activeTab === 'stats' && <StatsDashboard />}
         </AnimatePresence>
       </main>
