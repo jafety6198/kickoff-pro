@@ -123,7 +123,7 @@ Verification: Check the generated image against the database provided. Ensure th
 
       // Array of models to try in order of quality/requirement
       const modelsToTry = [
-        { name: 'gemini-3-flash-preview', size: '2K' },
+        { name: 'gemini-1.5-flash', size: undefined },
         { name: 'gemini-flash-latest', size: undefined }
       ];
 

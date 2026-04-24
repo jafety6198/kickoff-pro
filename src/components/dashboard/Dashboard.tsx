@@ -412,12 +412,12 @@ export function Dashboard() {
           {[
             { id: 'standings', label: 'Standings', icon: LayoutDashboard },
             { id: 'fixtures', label: 'Fixtures', icon: Calendar },
-            { id: 'tactical-hub', label: 'News Room', icon: Newspaper },
-            { id: 'team-hub', label: 'Tactical Hub', icon: Users },
+            { id: 'tactical-hub', label: 'AI News Room', icon: Newspaper },
+            { id: 'team-hub', label: 'Tactical Scout', icon: Users },
             { id: 'stats', label: 'Leagues Stats', icon: BarChart3 },
             { id: 'oracle', label: 'AI Oracle', icon: Sparkles, adminOnly: true },
-            { id: 'graphics', label: 'Fast Posters', icon: ImageIcon },
-            { id: 'graphics-engine', label: 'Graphic Engine', icon: Cpu },
+            { id: 'graphics', label: 'Poster Creator', icon: ImageIcon },
+            { id: 'graphics-engine', label: 'Graphic Suite', icon: Cpu },
           ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

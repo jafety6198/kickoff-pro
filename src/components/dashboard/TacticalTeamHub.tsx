@@ -45,6 +45,13 @@ interface ScoutData {
   hype_headlines_sw: string;
   hype_headlines_en: string;
   win_probability: number;
+  tactics?: {
+    formation: string;
+    style: string;
+    strengths: string[];
+    weaknesses: string[];
+  };
+  booster_tips?: string[];
 }
 
 // --- MICRO-COMPONENTS ---
@@ -230,13 +237,20 @@ export function TacticalTeamHub() {
           "opponent_threat_levels": { "defense": 1-10, "midfield": 1-10, "attack": 1-10 },
           "hype_headlines_sw": "A Swahili hype headline for the upcoming matches",
           "hype_headlines_en": "An English hype headline for the upcoming matches",
-          "win_probability": 0-100
+          "win_probability": 0-100,
+          "tactics": {
+            "formation": "e.g., 4-3-3",
+            "style": "e.g., Vertical Tiki-Taka",
+            "strengths": ["list 2-3 specific tactical strengths"],
+            "weaknesses": ["list 2-3 specific tactical weaknesses"]
+          },
+          "booster_tips": ["One killer tactical tip", "Another insider secret"]
         }
         Make the tone professional yet energetic. Ensure Swahili vibes are authentic.
       `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash-latest",
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: { responseMimeType: 'application/json' }
       });
@@ -403,6 +417,53 @@ export function TacticalTeamHub() {
                      <div className="text-slate-700 text-sm leading-relaxed font-medium bg-slate-50 p-6 rounded-3xl border border-slate-100">
                         <Typewriter text={reportData.tactical_summary} delay={10} />
                      </div>
+
+                     {reportData.tactics && (
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="space-y-2">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tactical DNA</h5>
+                              <div className="flex flex-wrap gap-2">
+                                 <Badge variant="outline" className="bg-white text-primary border-primary/20 text-[10px] py-1 px-3">
+                                    {reportData.tactics.formation}
+                                 </Badge>
+                                 <Badge variant="outline" className="bg-slate-100 text-slate-600 border-none text-[10px] py-1 px-3">
+                                    {reportData.tactics.style}
+                                 </Badge>
+                              </div>
+                           </div>
+                           <div className="space-y-2 text-right">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Strengths & Weaknesses</h5>
+                              <div className="flex flex-wrap gap-1 justify-end">
+                                 {reportData.tactics.strengths.map((s, idx) => (
+                                    <span key={idx} className="text-[9px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                       <CheckCircle2 className="w-2.5 h-2.5" /> {s}
+                                    </span>
+                                 ))}
+                                 {reportData.tactics.weaknesses.map((w, idx) => (
+                                    <span key={idx} className="text-[9px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-full">
+                                       <AlertCircle className="w-2.5 h-2.5" /> {w}
+                                    </span>
+                                 ))}
+                              </div>
+                           </div>
+                        </div>
+                     )}
+
+                     {reportData.booster_tips && (
+                        <div className="space-y-3 p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                           <div className="flex items-center gap-2">
+                              <Zap className="w-3.5 h-3.5 text-primary fill-primary" />
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-primary">Booster Tips</h5>
+                           </div>
+                           <ul className="space-y-2">
+                              {reportData.booster_tips.map((tip, idx) => (
+                                 <li key={idx} className="text-[11px] font-bold text-slate-700 flex items-start gap-2 leading-tight">
+                                    <span className="text-primary mt-0.5">•</span> {tip}
+                                 </li>
+                              ))}
+                           </ul>
+                        </div>
+                     )}
                   </div>
                 ) : !isAnalyzing && (
                   <div className="flex flex-col items-center justify-center h-full text-slate-300">
@@ -426,7 +487,8 @@ export function TacticalTeamHub() {
                       <div className="text-[8px] font-black uppercase tracking-widest text-slate-400">Threat Matrix</div>
                       <div className="flex gap-1 h-3 items-end">
                          {Object.entries(reportData.opponent_threat_levels).map(([k, v]) => (
-                            <div key={k} className="flex-1 space-y-1">
+                            <div key={k} className="flex-1 space-y-1 relative">
+                               <span className="absolute -top-4 w-full text-center text-[6px] font-black text-slate-400">{v}</span>
                                <div className="h-full bg-primary/10 rounded-t-sm group-hover:bg-primary/20 transition-colors flex flex-col justify-end">
                                   <div className="bg-primary rounded-t-sm" style={{ height: `${(v / 10) * 100}%` }} />
                                </div>

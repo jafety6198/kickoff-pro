@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export interface ScannedSquadResult {
   formation: string;
@@ -10,8 +10,6 @@ export interface ScannedSquadResult {
 
 export async function scanSquadImage(base64Image: string): Promise<ScannedSquadResult> {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
     const prompt = `
       Analyze this eFootball/PES squad management screenshot.
       Extract the following details:
@@ -27,25 +25,26 @@ export async function scanSquadImage(base64Image: string): Promise<ScannedSquadR
       }
     `;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType: "image/jpeg"
-        }
-      }
-    ]);
+    // Extract mimeType and base64 data
+    const parts = base64Image.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = parts[1];
 
-    const response = await result.response;
-    const text = response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    
-    if (!jsonMatch) {
-      throw new Error("Could not parse AI response");
-    }
+    const response = await ai.models.generateContent({
+      model: 'gemini-1.5-flash-latest',
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: prompt },
+          { inlineData: { data, mimeType } }
+        ]
+      }],
+      config: { responseMimeType: 'application/json' }
+    });
 
-    return JSON.parse(jsonMatch[0]);
+    const text = response.text || "{}";
+    return JSON.parse(text);
   } catch (error) {
     console.error("Squad Scan Error:", error);
     throw error;
