@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useStore, NewsItem } from '@/store/useStore';
 import { calculateStandings } from '@/lib/tournament-engine';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -88,11 +88,7 @@ export function TacticalHub() {
       const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        generationConfig: { responseMimeType: 'application/json' }
-      });
+      const ai = new GoogleGenAI({ apiKey });
       
       const statsContext = teamStats
         .sort((a,b) => b.pts - a.pts)
@@ -120,8 +116,13 @@ export function TacticalHub() {
         "romanoUpdates": ["string"]
       }`;
 
-      const scoutResult = await model.generateContent(prompt);
-      const resultText = scoutResult.response.text();
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { responseMimeType: 'application/json' }
+      });
+
+      const resultText = response.text || '{}';
       const result = JSON.parse(resultText);
 
       // Save Newsletter

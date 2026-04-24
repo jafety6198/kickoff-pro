@@ -504,8 +504,9 @@ export function Dashboard() {
           { id: 'tactical-hub', icon: Newspaper },
           { id: 'team-hub', icon: Users },
           { id: 'stats', icon: BarChart3 },
+          { id: 'oracle', icon: Sparkles, adminOnly: true },
           { id: 'graphics', icon: ImageIcon },
-        ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
+        ].filter((item: any) => !item.adminOnly || role === 'admin').map((item: any) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (
