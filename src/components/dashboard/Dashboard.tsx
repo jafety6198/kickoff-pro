@@ -27,14 +27,16 @@ import { useStore, Fixture, Team, Role } from '@/store/useStore';
 import { calculateStandings } from '@/lib/tournament-engine';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { PosterGenerator } from '../graphics/PosterGenerator';
+import { TacticalHub } from './TacticalHub';
+import { TacticalTeamHub } from './TacticalTeamHub';
+import { AILeagueGraphicsEngine } from './AILeagueGraphicsEngine';
+import { AIOracle } from './AIOracle';
 import { MatchManagementModal } from './MatchManagementModal';
 import { SquadManagementModal } from './SquadManagementModal';
 import { TeamManagementModal } from './TeamManagementModal';
 import { StatsDashboard } from './StatsDashboard';
-import { TacticalHub } from './TacticalHub';
-import { AILeagueGraphicsEngine } from './AILeagueGraphicsEngine';
-import { AIOracle } from './AIOracle';
+import { SeasonEndModal } from './SeasonEndModal';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { calculateLocalPrediction } from '@/lib/predictor';
 
@@ -324,10 +326,6 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
   );
 }
 
-import { toast } from 'sonner';
-
-import { SeasonEndModal } from './SeasonEndModal';
-
 const PROMOTED_TEAMS = [
   { id: '37', name: 'Norwich' },
   { id: '43', name: 'Luton' },
@@ -345,7 +343,7 @@ const PROMOTED_TEAMS = [
 
 export function Dashboard() {
   const { teams, fixtures, updateFixtureScore, role, resetTournament, setStep, setRole, nextSeason, currentProfileId } = useStore();
-  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'tactical-hub' | 'stats' | 'oracle' | 'graphics' | 'graphics-engine'>('standings');
+  const [activeTab, setActiveTab] = useState<'standings' | 'fixtures' | 'tactical-hub' | 'team-hub' | 'stats' | 'oracle' | 'graphics-engine'>('standings');
   const [selectedTeamForSquad, setSelectedTeamForSquad] = useState<Team | null>(null);
   const [selectedTeamForProfile, setSelectedTeamForProfile] = useState<Team | null>(null);
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
@@ -413,10 +411,10 @@ export function Dashboard() {
           {[
             { id: 'standings', label: 'Standings', icon: LayoutDashboard },
             { id: 'fixtures', label: 'Fixtures', icon: Calendar },
-            { id: 'tactical-hub', label: 'Tactical Hub', icon: Newspaper },
-            { id: 'stats', label: 'Stats', icon: BarChart3 },
+            { id: 'tactical-hub', label: 'News Room', icon: Newspaper },
+            { id: 'team-hub', label: 'Tactical Hub', icon: Users },
+            { id: 'stats', label: 'Leagues Stats', icon: BarChart3 },
             { id: 'oracle', label: 'AI Oracle', icon: Sparkles, adminOnly: true },
-            { id: 'graphics', label: 'Fast Posters', icon: ImageIcon },
             { id: 'graphics-engine', label: 'Graphic Engine', icon: Cpu },
           ].filter(item => !item.adminOnly || role === 'admin').map((item) => {
             const Icon = item.icon;
@@ -528,8 +526,7 @@ export function Dashboard() {
 
       {/* Main Content */}
       <main className={cn(
-        "flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-8",
-        activeTab === 'graphics' ? "p-0" : "p-4 sm:p-8"
+        "flex-1 overflow-y-auto no-scrollbar pb-24 md:pb-8 p-4 sm:p-8"
       )}>
         <AnimatePresence mode="wait">
           {activeTab === 'standings' && (
@@ -758,9 +755,19 @@ export function Dashboard() {
             </motion.div>
           )}
 
+          {activeTab === 'team-hub' && (
+            <motion.div
+              key="team-hub"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <TacticalTeamHub />
+            </motion.div>
+          )}
+
           {activeTab === 'oracle' && <AIOracle />}
           {activeTab === 'graphics-engine' && <AILeagueGraphicsEngine />}
-          {activeTab === 'graphics' && <PosterGenerator />}
           {activeTab === 'stats' && <StatsDashboard />}
         </AnimatePresence>
       </main>

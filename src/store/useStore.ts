@@ -24,6 +24,7 @@ export interface Team {
   collectiveStrength?: number;
   playstyle?: string;
   description?: string;
+  color?: string;
   form?: ('W' | 'D' | 'L')[];
 }
 
@@ -88,6 +89,12 @@ export interface Fixture {
   };
 }
 
+export interface ScoutingReport {
+  teamId: string;
+  report: string; // JSON string of the report
+  generatedAt: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -98,6 +105,7 @@ export interface Profile {
   fixtures: Fixture[];
   players: Player[];
   newsItems?: NewsItem[];
+  scoutingReports?: ScoutingReport[];
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +134,7 @@ interface TournamentState {
   fixtures: Fixture[];
   players: Player[];
   newsItems: NewsItem[];
+  scoutingReports: ScoutingReport[];
   
   // Actions
   setRole: (role: Role) => void;
@@ -147,6 +156,7 @@ interface TournamentState {
   setPlayers: (players: Player[]) => void;
   setNewsItems: (items: NewsItem[]) => void;
   addNewsItem: (item: NewsItem) => void;
+  addScoutingReport: (report: ScoutingReport) => void;
   updateFixtureScore: (fixtureId: string, leg: 1 | 2, homeScore: number, awayScore: number, stats?: FixtureLeg['stats']) => void;
   updateFixturePrediction: (fixtureId: string, prediction: Fixture['prediction']) => void;
   updateTeam: (teamId: string, updates: Partial<Team>) => void;
@@ -173,6 +183,7 @@ export const useStore = create<TournamentState>()(
       fixtures: [],
       players: [],
       newsItems: [],
+      scoutingReports: [],
 
       setRole: (role) => set({ role }),
       setStep: (step) => set({ step }),
@@ -188,6 +199,7 @@ export const useStore = create<TournamentState>()(
           fixtures: [],
           players: [],
           newsItems: [],
+          scoutingReports: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -202,6 +214,7 @@ export const useStore = create<TournamentState>()(
           fixtures: [],
           players: [],
           newsItems: [],
+          scoutingReports: [],
           step: 'editor'
         };
       }),
@@ -223,6 +236,7 @@ export const useStore = create<TournamentState>()(
           fixtures: profile.fixtures,
           players: profile.players,
           newsItems: profile.newsItems || [],
+          scoutingReports: profile.scoutingReports || [],
           step: nextStep
         };
       }),
@@ -251,6 +265,7 @@ export const useStore = create<TournamentState>()(
               fixtures: state.fixtures,
               players: state.players,
               newsItems: state.newsItems,
+              scoutingReports: state.scoutingReports,
               updatedAt: new Date().toISOString()
             };
           }
@@ -279,9 +294,9 @@ export const useStore = create<TournamentState>()(
           goalHistory: [], lastTeams: []
         }));
 
-        // Reset news for new season to keep it fresh? 
-        // Actually, maybe keep archive but start fresh count.
+        // Reset news for new season
         const resetNews: NewsItem[] = [];
+        const resetReports: ScoutingReport[] = [];
 
         const newSeason = state.season + 1;
         const newFixtures = generateRoundRobinFixtures(allTeams);
@@ -295,6 +310,7 @@ export const useStore = create<TournamentState>()(
               fixtures: newFixtures,
               players: resetPlayers,
               newsItems: resetNews,
+              scoutingReports: resetReports,
               updatedAt: new Date().toISOString()
             };
           }
@@ -308,6 +324,7 @@ export const useStore = create<TournamentState>()(
           fixtures: newFixtures,
           players: resetPlayers,
           newsItems: resetNews,
+          scoutingReports: resetReports,
           step: 'dashboard'
         };
       }),
@@ -333,6 +350,13 @@ export const useStore = create<TournamentState>()(
       },
       addNewsItem: (item) => {
         set((state) => ({ newsItems: [item, ...state.newsItems] }));
+        get().saveProfile();
+      },
+      addScoutingReport: (report) => {
+        set((state) => {
+          const filtered = state.scoutingReports.filter(r => r.teamId !== report.teamId);
+          return { scoutingReports: [report, ...filtered] };
+        });
         get().saveProfile();
       },
       

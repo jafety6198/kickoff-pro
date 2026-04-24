@@ -41,15 +41,15 @@ export function SeasonEndModal({ winner, relegated, isOpen, onNextSeason }: Seas
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md overflow-y-auto py-12">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-white/90 backdrop-blur-md overflow-y-auto py-12">
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-4xl bg-white rounded-[3rem] overflow-hidden shadow-2xl relative"
+        className="w-full max-w-4xl bg-white rounded-[3rem] overflow-hidden shadow-2xl relative border border-slate-100"
       >
         {/* Decorative Background */}
-        <div className="absolute top-0 left-0 w-full h-64 bg-slate-900" />
-        <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-primary/20 to-transparent" />
+        <div className="absolute top-0 left-0 w-full h-64 bg-slate-50" />
+        <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-primary/10 to-transparent" />
         
         <div className="relative z-10 p-8 sm:p-12 space-y-12">
           {/* Winner Poster */}
@@ -60,10 +60,10 @@ export function SeasonEndModal({ winner, relegated, isOpen, onNextSeason }: Seas
               transition={{ delay: 0.2 }}
               className="space-y-2"
             >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.3em] mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.3em] mb-4">
                 <Star className="w-3 h-3 fill-current" /> Season Champions <Star className="w-3 h-3 fill-current" />
               </div>
-              <h2 className="text-5xl sm:text-7xl font-black text-white uppercase tracking-tighter italic leading-none">
+              <h2 className="text-5xl sm:text-7xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">
                 {winner.name}
               </h2>
             </motion.div>
@@ -89,15 +89,15 @@ export function SeasonEndModal({ winner, relegated, isOpen, onNextSeason }: Seas
             </motion.div>
 
             <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900">
                 <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Points</p>
                 <p className="text-xl font-black">{winner.pts}</p>
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900">
                 <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Wins</p>
                 <p className="text-xl font-black">{winner.won}</p>
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-white">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-900">
                 <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">GD</p>
                 <p className="text-xl font-black">+{winner.gd}</p>
               </div>
@@ -144,7 +144,7 @@ export function SeasonEndModal({ winner, relegated, isOpen, onNextSeason }: Seas
           <div className="pt-4">
             <Button
               onClick={onNextSeason}
-              className="w-full h-20 rounded-[2rem] bg-slate-900 hover:bg-primary text-white font-black uppercase tracking-[0.2em] text-lg transition-all shadow-xl group"
+              className="w-full h-20 rounded-[2rem] bg-primary text-white font-black uppercase tracking-[0.2em] text-lg transition-all shadow-xl shadow-primary/20 hover:shadow-primary/40 group"
             >
               Prepare Next Season <ChevronRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>

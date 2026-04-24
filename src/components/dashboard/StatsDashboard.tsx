@@ -710,9 +710,9 @@ export function StatsDashboard() {
           <Button 
             onClick={handleTournamentInsight}
             disabled={insightLoading}
-            className="rounded-full bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] px-6 h-10 hover:bg-slate-800 shadow-xl transition-all"
+            className="rounded-full bg-primary text-white font-black uppercase tracking-widest text-[10px] px-6 h-10 hover:bg-primary/90 shadow-xl transition-all"
           >
-            {insightLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2 text-primary" />}
+            {insightLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2 fill-white" />}
             AI Insights
           </Button>
           <Button 
@@ -793,13 +793,13 @@ export function StatsDashboard() {
                   key={player.id}
                   className={cn(
                     "flex items-center justify-between p-4 rounded-3xl transition-all border group",
-                    i === 0 ? "bg-slate-900 border-none shadow-xl scale-[1.02]" : "bg-white border-slate-100 hover:border-amber-200 hover:shadow-lg"
+                    i === 0 ? "bg-white border-amber-200 border-2 shadow-xl scale-[1.02]" : "bg-white border-slate-100 hover:border-amber-200 hover:shadow-lg"
                   )}
                 >
                   <div className="flex items-center gap-4">
                     <span className={cn(
                       "text-xl font-black italic w-6 text-center",
-                      i === 0 ? "text-amber-500" : "text-slate-200"
+                      i === 0 ? "text-amber-500" : "text-slate-300"
                     )}>{i + 1}</span>
                     <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 p-2 relative">
                       <img 
@@ -809,15 +809,15 @@ export function StatsDashboard() {
                       />
                       {i === 0 && (
                         <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-1 shadow-lg">
-                          <Trophy className="w-2.5 h-2.5 text-white" />
+                          <Trophy className="w-3 h-3 text-white" />
                         </div>
                       )}
                     </div>
                     <div>
-                      <p className={cn("font-black uppercase tracking-tight leading-tight", i === 0 ? "text-white" : "text-slate-900")}>
+                      <p className="font-black uppercase tracking-tight leading-tight text-slate-900">
                         {player.name}
                       </p>
-                      <p className={cn("text-[8px] font-black uppercase tracking-widest", i === 0 ? "text-slate-400" : "text-slate-400")}>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">
                         {player.team?.name}
                       </p>
                     </div>
@@ -827,11 +827,11 @@ export function StatsDashboard() {
                     <div className="hidden sm:flex gap-1">
                       {(player.goalHistory || [0, 0, 0]).slice(0, 3).map((g, gi) => (
                         <div 
-                          key={gi} 
-                          className={cn(
-                            "w-1.5 h-4 rounded-full",
-                            g > 0 ? "bg-amber-500" : i === 0 ? "bg-white/10" : "bg-slate-100"
-                          )} 
+                           key={gi} 
+                           className={cn(
+                             "w-1.5 h-4 rounded-full",
+                             g > 0 ? "bg-emerald-500" : "bg-slate-100"
+                           )} 
                         />
                       ))}
                     </div>

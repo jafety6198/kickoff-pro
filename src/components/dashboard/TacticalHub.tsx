@@ -86,7 +86,10 @@ export function TacticalHub() {
 
     setLoading(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
+
+      const ai = new GoogleGenAI({ apiKey });
       
       const statsContext = teamStats
         .sort((a,b) => b.pts - a.pts)
@@ -115,14 +118,15 @@ export function TacticalHub() {
       }`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
+        model: "gemini-1.5-flash",
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         config: {
           responseMimeType: "application/json"
         }
       });
 
-      const result = JSON.parse(response.text || '{}');
+      const resultText = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const result = JSON.parse(resultText);
 
       // Save Newsletter
       if (result.newsletterContent) {
@@ -167,7 +171,7 @@ export function TacticalHub() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 text-[8px] font-black uppercase tracking-[0.3em] text-white w-fit">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-[8px] font-black uppercase tracking-[0.3em] text-slate-900 w-fit">
             AI Tactical Hub
           </div>
           <h2 className="text-4xl sm:text-6xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">
@@ -180,7 +184,7 @@ export function TacticalHub() {
         <Button 
           onClick={generateNewsletter}
           disabled={loading}
-          className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-primary text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl hover:shadow-primary/20 group"
+          className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl hover:shadow-primary/20 group"
         >
           {loading ? (
             <Loader2 className="w-5 h-5 mr-3 animate-spin" />
@@ -254,13 +258,13 @@ export function TacticalHub() {
 
           <div className="space-y-4">
             {newsFeed.filter(item => item.type === 'romano').length === 0 ? (
-              <div className="glass-card p-12 border-none text-center bg-slate-900 text-white space-y-4">
-                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-2">
+              <div className="glass-card p-12 border-none text-center bg-slate-50 text-slate-900 space-y-4 shadow-sm border-slate-100">
+                <div className="w-16 h-16 rounded-full bg-white border border-slate-200 flex items-center justify-center mx-auto mb-2">
                    <Hash className="w-8 h-8 text-primary animate-pulse" />
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-[#00FF85]">Status: Monitoring</p>
-                  <p className="text-[10px] uppercase tracking-widest opacity-40 mt-1">Waiting for exclusive scoops...</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-emerald-600">Status: Monitoring</p>
+                  <p className="text-[10px] uppercase tracking-widest opacity-40 mt-1 italic text-slate-400">Waiting for exclusive scoops...</p>
                 </div>
               </div>
             ) : (
@@ -270,40 +274,40 @@ export function TacticalHub() {
                    animate={{ opacity: 1, x: 0 }}
                    transition={{ delay: i * 0.05 }}
                    key={item.id}
-                   className="bg-[#0A0A0B] p-6 rounded-[2rem] text-white space-y-4 relative overflow-hidden group hover:shadow-2xl hover:shadow-[#00FF85]/5 transition-all border border-white/5"
+                   className="bg-white p-6 rounded-[2rem] text-slate-900 space-y-4 relative overflow-hidden group hover:shadow-2xl hover:shadow-slate-200 transition-all border border-slate-100 shadow-sm"
                 >
                   <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-                    <Send className="w-24 h-24 rotate-12" />
+                    <Send className="w-24 h-24 rotate-12 text-slate-200" />
                   </div>
 
                   <div className="flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-[#00FF85] animate-pulse shadow-[0_0_8px_#00FF85]" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#00FF85]">Exclusive • Romano style</span>
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Exclusive • Romano style</span>
                     </div>
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => handleCopy(item.content, item.id)}
-                      className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-[#00FF85] transition-colors"
+                      className="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-emerald-600 transition-colors"
                     >
                       {copiedId === item.id ? (
-                        <CheckCircle2 className="w-4 h-4 text-[#00FF85]" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
                     </Button>
                   </div>
 
-                  <p className="text-sm font-bold leading-relaxed italic relative z-10 selection:bg-[#00FF85] selection:text-black">
+                  <p className="text-sm font-bold leading-relaxed italic relative z-10 selection:bg-emerald-100 selection:text-emerald-900">
                     {item.content}
                   </p>
 
                   <div className="flex flex-wrap gap-3 pt-2 relative z-10">
                     {item.tags?.map(tag => (
-                      <span key={tag} className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">#{tag}</span>
+                      <span key={tag} className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">#{tag}</span>
                     ))}
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#00FF85]/40 italic">#HereWeGo</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600/40 italic">#HereWeGo</span>
                   </div>
                 </motion.div>
               ))

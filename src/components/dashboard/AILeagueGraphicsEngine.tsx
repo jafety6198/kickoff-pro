@@ -111,7 +111,10 @@ Verification: Check the generated image against the database provided. Ensure th
     }, 800);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error("GEMINI_API_KEY is missing");
+
+      const ai = new GoogleGenAI({ apiKey });
       const prompt = generateAIPrompt(editableTeams, focusArea);
 
       // Extract base64 and MIME type for Gemini
@@ -120,8 +123,8 @@ Verification: Check the generated image against the database provided. Ensure th
 
       // Array of models to try in order of quality/requirement
       const modelsToTry = [
-        { name: 'gemini-3.1-flash-image-preview', size: '2K' },
-        { name: 'gemini-2.5-flash-image', size: undefined }
+        { name: 'gemini-3-flash-preview', size: '2K' },
+        { name: 'gemini-1.5-flash', size: undefined }
       ];
 
       let lastError = null;
