@@ -129,9 +129,9 @@ ALTER TABLE public.scouting_reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public profiles are viewable by everyone" ON public.user_profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update own profile" ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
 
--- Policies for leagues (Viewable if member)
-CREATE POLICY "Leagues viewable by members" ON public.leagues FOR SELECT 
-USING (EXISTS (SELECT 1 FROM league_members WHERE league_id = leagues.id AND user_id = auth.uid()));
+-- Policies for leagues (Viewable if member or creator)
+CREATE POLICY "Leagues viewable by members or creator" ON public.leagues FOR SELECT 
+USING (creator_id = auth.uid() OR EXISTS (SELECT 1 FROM league_members WHERE league_id = leagues.id AND user_id = auth.uid()));
 
 CREATE POLICY "Leagues insertable by authenticated" ON public.leagues FOR INSERT 
 WITH CHECK (auth.uid() = creator_id);
@@ -142,6 +142,12 @@ USING (creator_id = auth.uid());
 -- Policies for members
 CREATE POLICY "Members viewable by league members" ON public.league_members FOR SELECT 
 USING (EXISTS (SELECT 1 FROM league_members lm WHERE lm.league_id = league_members.league_id AND lm.user_id = auth.uid()));
+
+CREATE POLICY "Users can join as member" ON public.league_members FOR INSERT 
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Owners can remove members" ON public.league_members FOR DELETE
+USING (EXISTS (SELECT 1 FROM public.leagues WHERE id = league_id AND creator_id = auth.uid()));
 
 -- Policies for data tables (Teams, Fixtures, etc.)
 -- Standard pattern: Allow access if the user is a member of the league the record belongs to.

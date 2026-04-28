@@ -243,9 +243,9 @@ export const useStore = create<TournamentState>()(
           await supabaseService.migrateFullProfile(profile, user.id);
           await get().syncLeagues();
           toast.success('Migration successful!', { id: 'migration' });
-        } catch (error) {
+        } catch (error: any) {
           console.error('Migration failed:', error);
-          toast.error('Migration failed', { id: 'migration' });
+          toast.error(`Migration failed: ${error.message || 'Unknown error'}`, { id: 'migration' });
         }
       },
 

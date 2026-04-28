@@ -36,6 +36,7 @@ export const supabaseService = {
   },
 
   async createLeague(name: string, mode: TournamentMode, teamCount: number, userId: string, password?: string) {
+    console.log('supabaseService: Creating league...', { name, mode, teamCount });
     // 1. Create League
     const { data: league, error: leagueError } = await supabase
       .from('leagues')
@@ -44,12 +45,15 @@ export const supabaseService = {
         mode,
         team_count: teamCount,
         creator_id: userId,
-        password_hash: password ? btoa(password) : null, // Simple demo "hashing" for now, or use a proper lib
+        password_hash: password ? btoa(password) : null,
       })
       .select()
       .single();
 
-    if (leagueError) throw leagueError;
+    if (leagueError) {
+      console.error('supabaseService: League creation error:', leagueError);
+      throw leagueError;
+    }
 
     // 2. Add creator as owner member
     const { error: memberError } = await supabase
@@ -60,7 +64,10 @@ export const supabaseService = {
         role: 'owner'
       });
 
-    if (memberError) throw memberError;
+    if (memberError) {
+      console.error('supabaseService: Member creation error:', memberError);
+      throw memberError;
+    }
 
     return league;
   },
@@ -179,8 +186,9 @@ export const supabaseService = {
   },
 
   async migrateFullProfile(profile: Profile, userId: string) {
+    console.log('supabaseService: Starting migration for:', profile.name);
     // 1. Create the League
-    const league = await this.createLeague(
+    const league = await supabaseService.createLeague(
       profile.name, 
       profile.mode, 
       profile.teamCount, 
@@ -188,53 +196,71 @@ export const supabaseService = {
     );
 
     // 2. Upload Teams and get back their new UUIDs
-    const insertedTeams = await this.saveTeams(league.id, profile.teams);
+    const insertedTeams = await supabaseService.saveTeams(league.id, profile.teams);
     
-    // Create mapping of old team names to new IDs (since local might not have unique IDs)
+    // Create mapping of old team names to new IDs
     const teamMapping: Record<string, string> = {};
-    insertedTeams.forEach(t => {
+    insertedTeams?.forEach(t => {
       teamMapping[t.name] = t.id;
     });
 
+    console.log('supabaseService: Teams migrated, count:', insertedTeams?.length);
+
     // 3. Upload Fixtures with mapped IDs
     if (profile.fixtures && profile.fixtures.length > 0) {
+      console.log('supabaseService: Migrating fixtures...', profile.fixtures.length);
       const fixturesToInsert = profile.fixtures.map(f => {
+        // Find home/away team IDs using the names from local data
+        const homeTeamName = profile.teams.find(t => t.id === f.homeTeamId)?.name;
+        const awayTeamName = profile.teams.find(t => t.id === f.awayTeamId)?.name;
+
+        if (!homeTeamName || !awayTeamName) return null;
+
         return {
           league_id: league.id,
-          home_team_id: teamMapping[profile.teams.find(t => t.id === f.homeTeamId)?.name || ''],
-          away_team_id: teamMapping[profile.teams.find(t => t.id === f.awayTeamId)?.name || ''],
+          home_team_id: teamMapping[homeTeamName],
+          away_team_id: teamMapping[awayTeamName],
           round: f.round,
           leg1_score_home: f.leg1.homeScore,
           leg1_score_away: f.leg1.awayScore,
           leg1_status: f.leg1.status,
           prediction: f.prediction || null
         };
-      }).filter(f => f.home_team_id && f.away_team_id);
+      }).filter((f): f is any => f !== null && !!f.home_team_id && !!f.away_team_id);
 
       if (fixturesToInsert.length > 0) {
         const { error: fError } = await supabase.from('fixtures').insert(fixturesToInsert);
-        if (fError) console.error('Migration: Fixtures error', fError);
+        if (fError) {
+          console.error('Migration: Fixtures error', fError);
+          toast.error(`Fixture migration error: ${fError.message}`);
+        }
       }
     }
 
     // 4. Upload Players
     if (profile.players && profile.players.length > 0) {
+      console.log('supabaseService: Migrating players...', profile.players.length);
       const playersToInsert = profile.players.map(p => {
-        const team = profile.teams.find(t => t.id === p.teamId);
+        const teamName = profile.teams.find(t => t.id === p.teamId)?.name;
+        if (!teamName) return null;
+
         return {
           league_id: league.id,
-          team_id: team ? teamMapping[team.name] : null,
+          team_id: teamMapping[teamName],
           name: p.name,
           goals: p.goals,
           assists: p.assists,
           yellow_cards: p.yellowCards,
           red_cards: p.redCards
         };
-      }).filter(p => p.team_id);
+      }).filter((p): p is any => p !== null && !!p.team_id);
 
       if (playersToInsert.length > 0) {
         const { error: pError } = await supabase.from('players').insert(playersToInsert);
-        if (pError) console.error('Migration: Players error', pError);
+        if (pError) {
+          console.error('Migration: Players error', pError);
+          toast.error(`Player migration error: ${pError.message}`);
+        }
       }
     }
 
