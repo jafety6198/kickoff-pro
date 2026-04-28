@@ -1,5 +1,17 @@
 
--- 1. Profiles Table (Extends Supabase Auth)
+-- SUPABASE SCHEMA RESET (Run this in Supabase SQL Editor if you encounter migration errors)
+-- WARNING: This will delete existing cloud data. Local data is safe.
+
+-- DROP TABLE IF EXISTS public.scouting_reports CASCADE;
+-- DROP TABLE IF EXISTS public.news_items CASCADE;
+-- DROP TABLE IF EXISTS public.players CASCADE;
+-- DROP TABLE IF EXISTS public.fixtures CASCADE;
+-- DROP TABLE IF EXISTS public.teams CASCADE;
+-- DROP TABLE IF EXISTS public.league_members CASCADE;
+-- DROP TABLE IF EXISTS public.leagues CASCADE;
+-- DROP TABLE IF EXISTS public.user_profiles CASCADE;
+
+-- 1. Profiles Table
 CREATE TABLE IF NOT EXISTS public.user_profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -14,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.leagues (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
     creator_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE NOT NULL,
-    password_hash TEXT, -- For private access
+    password_hash TEXT,
     season INTEGER DEFAULT 1,
     mode TEXT CHECK (mode IN ('league', 'knockout')),
     team_count INTEGER DEFAULT 8,
@@ -23,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.leagues (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. League Members (Handles shared access)
+-- 3. League Members
 CREATE TABLE IF NOT EXISTS public.league_members (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     league_id UUID REFERENCES public.leagues(id) ON DELETE CASCADE NOT NULL,
@@ -55,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public.teams (
     playstyle TEXT,
     description TEXT,
     color TEXT,
-    form TEXT[], -- Array of 'W', 'D', 'L'
+    form TEXT[], 
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -100,7 +112,7 @@ CREATE TABLE IF NOT EXISTS public.news_items (
     league_id UUID REFERENCES public.leagues(id) ON DELETE CASCADE NOT NULL,
     title TEXT NOT NULL,
     content TEXT,
-    type TEXT, -- newsletter, romano
+    type TEXT, 
     tags TEXT[],
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -114,8 +126,7 @@ CREATE TABLE IF NOT EXISTS public.scouting_reports (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- --- ROW LEVEL SECURITY (RLS) ---
-
+-- --- RLS ---
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.leagues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.league_members ENABLE ROW LEVEL SECURITY;
@@ -125,11 +136,12 @@ ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.news_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scouting_reports ENABLE ROW LEVEL SECURITY;
 
--- Policies for user_profiles
+-- Profiles Policies
 CREATE POLICY "Public profiles are viewable by everyone" ON public.user_profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert own profile" ON public.user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
 
--- Policies for leagues (Viewable if member or creator)
+-- League Policies
 CREATE POLICY "Leagues viewable by members or creator" ON public.leagues FOR SELECT 
 USING (creator_id = auth.uid() OR EXISTS (SELECT 1 FROM league_members WHERE league_id = leagues.id AND user_id = auth.uid()));
 
@@ -139,7 +151,7 @@ WITH CHECK (auth.uid() = creator_id);
 CREATE POLICY "Leagues updatable by owners" ON public.leagues FOR UPDATE 
 USING (creator_id = auth.uid());
 
--- Policies for members
+-- Member Policies
 CREATE POLICY "Members viewable by league members" ON public.league_members FOR SELECT 
 USING (EXISTS (SELECT 1 FROM league_members lm WHERE lm.league_id = league_members.league_id AND lm.user_id = auth.uid()));
 
@@ -149,8 +161,7 @@ WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Owners can remove members" ON public.league_members FOR DELETE
 USING (EXISTS (SELECT 1 FROM public.leagues WHERE id = league_id AND creator_id = auth.uid()));
 
--- Policies for data tables (Teams, Fixtures, etc.)
--- Standard pattern: Allow access if the user is a member of the league the record belongs to.
+-- Data Policies
 CREATE POLICY "Teams access for league members" ON public.teams FOR ALL 
 USING (EXISTS (SELECT 1 FROM league_members WHERE league_id = teams.league_id AND user_id = auth.uid()));
 
@@ -166,7 +177,7 @@ USING (EXISTS (SELECT 1 FROM league_members WHERE league_id = news_items.league_
 CREATE POLICY "Scouting access for league members" ON public.scouting_reports FOR ALL 
 USING (EXISTS (SELECT 1 FROM league_members WHERE league_id = scouting_reports.league_id AND user_id = auth.uid()));
 
--- Automatically create user_profile on signup
+-- Trigger for new users
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
 RETURNS TRIGGER AS $$
 BEGIN
@@ -176,11 +187,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Recreate trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- Sync any existing users who signed up before the trigger was created
+-- Sync any existing users
 INSERT INTO public.user_profiles (id, email, display_name)
 SELECT id, email, raw_user_meta_data->>'display_name'
 FROM auth.users

@@ -189,22 +189,30 @@ export const supabaseService = {
     console.log('supabaseService: Starting migration for:', profile.name);
     
     // Ensure user profile exists (fails if trigger didn't run yet)
-    const { data: profileCheck, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('id')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data: profileCheck } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
 
-    if (profileError || !profileCheck) {
-      console.log('supabaseService: Profile missing, creating manually...');
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('user_profiles').upsert({
-          id: userId,
-          email: user.email!,
-          display_name: user.user_metadata?.display_name || user.email?.split('@')[0]
-        });
+      if (!profileCheck) {
+        console.log('supabaseService: Profile missing, creating manually...');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { error: upsertError } = await supabase.from('user_profiles').upsert({
+            id: userId,
+            email: user.email!,
+            display_name: user.user_metadata?.display_name || user.email?.split('@')[0]
+          });
+          if (upsertError) {
+             console.error('Profile upsert failed:', upsertError);
+             throw new Error(`Failed to initialize cloud profile: ${upsertError.message}`);
+          }
+        }
       }
+    } catch (e: any) {
+      console.warn('Profile sync check failed, attempting migration anyway...', e);
     }
 
     // 1. Create the League
