@@ -187,6 +187,26 @@ export const supabaseService = {
 
   async migrateFullProfile(profile: Profile, userId: string) {
     console.log('supabaseService: Starting migration for:', profile.name);
+    
+    // Ensure user profile exists (fails if trigger didn't run yet)
+    const { data: profileCheck, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profileCheck) {
+      console.log('supabaseService: Profile missing, creating manually...');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('user_profiles').upsert({
+          id: userId,
+          email: user.email!,
+          display_name: user.user_metadata?.display_name || user.email?.split('@')[0]
+        });
+      }
+    }
+
     // 1. Create the League
     const league = await supabaseService.createLeague(
       profile.name, 

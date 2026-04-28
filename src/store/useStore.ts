@@ -111,6 +111,7 @@ export interface Profile {
   scoutingReports?: ScoutingReport[];
   createdAt: string;
   updatedAt: string;
+  isCloud?: boolean;
 }
 
 export interface NewsItem {
@@ -219,7 +220,7 @@ export const useStore = create<TournamentState>()(
 
           // Merge with local profiles (those not marked as Cloud and not already matched by name/config)
           const localProfiles = get().profiles.filter(p => 
-            !(p as any).isCloud && !cloudProfiles.some(cp => cp.name === p.name && cp.mode === p.mode)
+            !p.isCloud && !cloudProfiles.some(cp => cp.name === p.name && cp.mode === p.mode)
           );
 
           set({ profiles: [...cloudProfiles, ...localProfiles] });

@@ -179,3 +179,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- Sync any existing users who signed up before the trigger was created
+INSERT INTO public.user_profiles (id, email, display_name)
+SELECT id, email, raw_user_meta_data->>'display_name'
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
