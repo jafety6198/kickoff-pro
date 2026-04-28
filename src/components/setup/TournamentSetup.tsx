@@ -9,13 +9,14 @@ import { toast } from 'sonner';
 export function TournamentSetup() {
   const { createProfile, setTeamCount, teamCount, setStep } = useStore();
   const [leagueName, setLeagueName] = useState('');
+  const [leaguePassword, setLeaguePassword] = useState('');
 
-  const handleModeSelect = (mode: 'league' | 'knockout') => {
+  const handleModeSelect = async (mode: 'league' | 'knockout') => {
     if (!leagueName.trim()) {
       toast.error('Please enter a league name first');
       return;
     }
-    createProfile(leagueName.trim(), mode, teamCount);
+    await createProfile(leagueName.trim(), mode, teamCount, leaguePassword.trim() || undefined);
     toast.success(`${leagueName} career initialized!`);
   };
 
@@ -49,15 +50,33 @@ export function TournamentSetup() {
         <div className="max-w-md mx-auto space-y-8">
           {/* League Name Input */}
           <div className="glass-card p-8 sm:p-10 space-y-4">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">League Name</label>
-            <div className="relative">
-              <Edit3 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-              <Input 
-                value={leagueName}
-                onChange={(e) => setLeagueName(e.target.value)}
-                placeholder="e.g. Premier League 2024"
-                className="glass-input w-full pl-12 font-bold text-slate-900 h-14"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">League Name</label>
+                <div className="relative">
+                  <Edit3 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                  <Input 
+                    value={leagueName}
+                    onChange={(e) => setLeagueName(e.target.value)}
+                    placeholder="e.g. Premier League 2024"
+                    className="glass-input w-full pl-12 font-bold text-slate-900 h-14"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">Access Password (Optional)</label>
+                <div className="relative">
+                  <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                  <Input 
+                    type="password"
+                    value={leaguePassword}
+                    onChange={(e) => setLeaguePassword(e.target.value)}
+                    placeholder="Secure your league"
+                    className="glass-input w-full pl-12 font-bold text-slate-900 h-14"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

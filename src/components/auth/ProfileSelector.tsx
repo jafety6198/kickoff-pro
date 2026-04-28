@@ -13,9 +13,14 @@ import {
   Edit2,
   ChevronRight,
   Flame,
-  LogOut
+  LogOut,
+  Link,
+  Cloud,
+  CloudOff,
+  Zap
 } from 'lucide-react';
 import { useStore, Profile } from '@/store/useStore';
+import { supabaseService } from '@/services/supabaseService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -32,13 +37,35 @@ import {
 import { toast } from 'sonner';
 
 export function ProfileSelector() {
-  const { profiles, loadProfile, deleteProfile, renameProfile, setStep, role, setRole } = useStore();
+  const { profiles, loadProfile, deleteProfile, renameProfile, setStep, role, setRole, syncLeagues, migrateProfile } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [profileToRename, setProfileToRename] = useState<Profile | null>(null);
   const [newName, setNewName] = useState('');
+  
+  const [joinLeagueId, setJoinLeagueId] = useState('');
+  const [joinPassword, setJoinPassword] = useState('');
+  const [joining, setJoining] = useState(false);
 
   const isAdmin = role === 'admin';
+
+  const handleJoinLeague = async () => {
+    if (!joinLeagueId.trim()) return;
+    setJoining(true);
+    try {
+      await supabaseService.joinLeague(joinLeagueId.trim(), joinPassword.trim());
+      await syncLeagues();
+      setIsJoinModalOpen(false);
+      setJoinLeagueId('');
+      setJoinPassword('');
+      toast.success('Successfully joined the league!');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to join league');
+    } finally {
+      setJoining(false);
+    }
+  };
 
   const filteredProfiles = useMemo(() => {
     return profiles
@@ -113,6 +140,14 @@ export function ProfileSelector() {
                 className="h-14 w-full sm:w-72 pl-12 rounded-2xl border-slate-200 bg-white shadow-sm focus:ring-primary/20 font-bold"
               />
             </div>
+            {!isAdmin && (
+              <Button 
+                onClick={() => setIsJoinModalOpen(true)}
+                className="h-14 px-8 rounded-2xl bg-primary text-white font-black uppercase tracking-widest shadow-xl shadow-primary/20 transition-all hover:-translate-y-1"
+              >
+                <Link className="w-5 h-5 mr-2" /> Join Shared League
+              </Button>
+            )}
             {isAdmin && (
               <Button 
                 onClick={() => setStep('setup')}
@@ -130,6 +165,25 @@ export function ProfileSelector() {
             </Button>
           </div>
         </div>
+
+        {/* Migration Nudge */}
+        {profiles.some(p => !(p as any).isCloud) && isAdmin && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-amber-900 uppercase tracking-tighter italic">Local Data Detected</p>
+                <p className="text-xs text-amber-700 font-medium tracking-tight">Sync your local careers to the cloud to access them anywhere.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Quick Access / Last Played */}
         {lastProfile && !searchQuery && (
@@ -210,10 +264,30 @@ export function ProfileSelector() {
                         <Badge variant="secondary" className="bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest">
                           {profile.mode}
                         </Badge>
+                        {(profile as any).isCloud ? (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                            <Cloud className="w-2.5 h-2.5" /> Cloud
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                            <CloudOff className="w-2.5 h-2.5" /> Local
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     {isAdmin && (
                       <div className="flex gap-1">
+                        {!(profile as any).isCloud && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => migrateProfile(profile.id)}
+                            className="w-8 h-8 rounded-lg text-amber-500 hover:text-emerald-500 hover:bg-emerald-50"
+                            title="Migrate to Cloud"
+                          >
+                            <Zap className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -335,6 +409,53 @@ export function ProfileSelector() {
               className="h-12 rounded-xl bg-primary text-white font-black uppercase tracking-widest px-8"
             >
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Join League Modal */}
+      <Dialog open={isJoinModalOpen} onOpenChange={setIsJoinModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-[2rem] border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tighter italic">Join Private League</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">League ID (UUID)</label>
+              <Input 
+                value={joinLeagueId}
+                onChange={(e) => setJoinLeagueId(e.target.value)}
+                placeholder="Paste the shared ID..."
+                className="h-14 rounded-2xl border-slate-200 font-bold"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Join Password</label>
+              <Input 
+                type="password"
+                value={joinPassword}
+                onChange={(e) => setJoinPassword(e.target.value)}
+                placeholder="Enter password..."
+                className="h-14 rounded-2xl border-slate-200 font-bold"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsJoinModalOpen(false)}
+              className="h-12 rounded-xl font-black uppercase tracking-widest border-slate-200"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleJoinLeague}
+              disabled={joining}
+              className="h-12 rounded-xl bg-primary text-white font-black uppercase tracking-widest px-8"
+            >
+              {joining ? 'Joining...' : 'Unlock League'}
             </Button>
           </DialogFooter>
         </DialogContent>
