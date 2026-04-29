@@ -110,7 +110,7 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
         },
         score_a: (f.leg1.homeScore || 0) + (f.leg2.homeScore || 0),
         score_b: (f.leg1.awayScore || 0) + (f.leg2.awayScore || 0),
-        status: (f.leg1.status === 'finished' && f.leg2.status === 'finished') ? 'finished' : 'pending',
+        status: (f.leg1?.status === 'finished' && f.leg2?.status === 'finished') ? 'finished' : 'pending',
         match_date: new Date().toISOString()
       };
     });
@@ -527,7 +527,7 @@ export function PosterGenerator({ selectedFixture: externalFixture, templateId }
                {focusTeams.map((teamId, idx) => {
                   const team = storeTeams.find(t => t.id === teamId);
                   const upcoming = storeFixtures
-                    .filter(f => (f.homeTeamId === teamId || f.awayTeamId === teamId) && (f.leg1.status === 'pending' || f.leg2.status === 'pending'))
+                    .filter(f => (f.homeTeamId === teamId || f.awayTeamId === teamId) && (f.leg1?.status === 'pending' || f.leg2?.status === 'pending'))
                     .slice(0, 5);
                   
                   return (

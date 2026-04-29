@@ -17,8 +17,8 @@ export function calculateLocalPrediction(
     fixtures.forEach(f => {
       const isHomeTeam = f.homeTeamId === teamId;
       if (f.homeTeamId === teamId || f.awayTeamId === teamId) {
-        if (f.leg1?.status === 'finished') relevantLegs.push({ stats: f.leg1.stats, isHome: isHomeTeam, round: f.round });
-        if (f.leg2?.status === 'finished') relevantLegs.push({ stats: f.leg2.status, isHome: !isHomeTeam, round: f.round });
+        if (f.leg1?.status === 'finished') relevantLegs.push({ stats: f.leg1?.stats, isHome: isHomeTeam, round: f.round });
+        if (f.leg2?.status === 'finished') relevantLegs.push({ stats: f.leg2?.stats, isHome: !isHomeTeam, round: f.round });
       }
     });
 

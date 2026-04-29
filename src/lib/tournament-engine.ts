@@ -69,11 +69,11 @@ export function calculateStandings(teams: Team[], fixtures: Fixture[]): Team[] {
   // Process finished fixtures
   sortedFixtures.forEach(f => {
     // Check Leg 1
-    if (f.leg1.status === 'finished' && f.leg1.homeScore !== null && f.leg1.awayScore !== null) {
+    if (f.leg1?.status === 'finished' && f.leg1.homeScore !== null && f.leg1.awayScore !== null) {
       updateStats(f.homeTeamId, f.awayTeamId, f.leg1.homeScore, f.leg1.awayScore);
     }
     // Check Leg 2
-    if (f.leg2.status === 'finished' && f.leg2.homeScore !== null && f.leg2.awayScore !== null) {
+    if (f.leg2?.status === 'finished' && f.leg2.homeScore !== null && f.leg2.awayScore !== null) {
       // In Leg 2, roles are reversed for stadium/home advantage usually, 
       // but the data structure says homeTeamId/awayTeamId for the FIXTURE.
       // We assume Leg 2 is played at the original Away Team's stadium.

@@ -298,13 +298,13 @@ function FixtureCard({ fixture, teams, fixtures, role, updateFixtureScore, updat
                       {/* Combined Possession */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-600">
-                          <span>{Math.round(((fixture.leg1?.stats?.possession_home || 50) + (fixture.leg2?.stats?.possession_away || 50)) / 2)}%</span>
+                          <span>{Math.round(((fixture.leg1.stats.possession_home || 50) + (fixture.leg2.stats.possession_away || 50)) / 2)}%</span>
                           <span className="uppercase tracking-widest opacity-50">Possession</span>
-                          <span>{Math.round(((fixture.leg1?.stats?.possession_away || 50) + (fixture.leg2?.stats?.possession_home || 50)) / 2)}%</span>
+                          <span>{Math.round(((fixture.leg1.stats.possession_away || 50) + (fixture.leg2.stats.possession_home || 50)) / 2)}%</span>
                         </div>
                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                          <div className="h-full bg-slate-900" style={{ width: `${Math.round(((fixture.leg1?.stats?.possession_home || 50) + (fixture.leg2?.stats?.possession_away || 50)) / 2)}%` }} />
-                          <div className="h-full bg-slate-300" style={{ width: `${Math.round(((fixture.leg1?.stats?.possession_away || 50) + (fixture.leg2?.stats?.possession_home || 50)) / 2)}%` }} />
+                          <div className="h-full bg-slate-900" style={{ width: `${Math.round(((fixture.leg1.stats.possession_home || 50) + (fixture.leg2.stats.possession_away || 50)) / 2)}%` }} />
+                          <div className="h-full bg-slate-300" style={{ width: `${Math.round(((fixture.leg1.stats.possession_away || 50) + (fixture.leg2.stats.possession_home || 50)) / 2)}%` }} />
                         </div>
                       </div>
                     </div>
@@ -350,7 +350,7 @@ export function Dashboard() {
   const standings = useMemo(() => calculateStandings(teams, fixtures), [teams, fixtures]);
   
   const isSeasonFinished = useMemo(() => {
-    return fixtures.length > 0 && fixtures.every(f => f.leg1.status === 'finished' && f.leg2.status === 'finished');
+    return fixtures.length > 0 && fixtures.every(f => f.leg1?.status === 'finished' && f.leg2?.status === 'finished');
   }, [fixtures]);
 
   const [showSeasonEnd, setShowSeasonEnd] = useState(false);

@@ -87,7 +87,7 @@ export function MatchScanner() {
       const fixture = fixtures.find(f => 
         ((f.homeTeamId === homeTeam.id && f.awayTeamId === awayTeam.id) || 
          (f.homeTeamId === awayTeam.id && f.awayTeamId === homeTeam.id)) &&
-        (f.leg1.status === 'pending' || f.leg2.status === 'pending')
+        (f.leg1?.status === 'pending' || f.leg2?.status === 'pending')
       );
 
       if (!fixture) {
@@ -96,7 +96,7 @@ export function MatchScanner() {
       }
 
       // Determine which leg to update (Leg 1 first, then Leg 2)
-      const legToUpdate = fixture.leg1.status === 'pending' ? 1 : 2;
+      const legToUpdate = fixture.leg1?.status === 'pending' ? 1 : 2;
 
       // Determine which score goes where based on home/away assignment in fixture
       // Remember that roles swap in Leg 2

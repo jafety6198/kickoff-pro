@@ -1,9 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { generateRoundRobinFixtures } from '@/lib/tournament-engine';
-import { supabaseService } from '@/services/supabaseService';
-import { User } from '@supabase/supabase-js';
-import { toast } from 'sonner';
 
 export type Role = 'admin' | 'guest' | null;
 export type TournamentMode = 'league' | 'knockout' | null;
@@ -111,7 +108,6 @@ export interface Profile {
   scoutingReports?: ScoutingReport[];
   createdAt: string;
   updatedAt: string;
-  isCloud?: boolean;
 }
 
 export interface NewsItem {
@@ -124,7 +120,6 @@ export interface NewsItem {
 }
 
 interface TournamentState {
-  user: User | null;
   role: Role;
   step: 'entry' | 'profiles' | 'setup' | 'editor' | 'dashboard';
   
@@ -142,18 +137,12 @@ interface TournamentState {
   scoutingReports: ScoutingReport[];
   
   // Actions
-  setUser: (user: User | null) => void;
   setRole: (role: Role) => void;
   setStep: (step: TournamentState['step']) => void;
   
-  // Sync Actions
-  syncLeagues: () => Promise<void>;
-  syncActiveLeague: (id: string) => Promise<void>;
-  migrateProfile: (id: string) => Promise<void>;
-
   // Profile Actions
-  createProfile: (name: string, mode: TournamentMode, teamCount: number, password?: string) => Promise<void>;
-  loadProfile: (id: string) => Promise<void>;
+  createProfile: (name: string, mode: TournamentMode, teamCount: number) => void;
+  loadProfile: (id: string) => void;
   deleteProfile: (id: string) => void;
   saveProfile: () => void;
   nextSeason: (newTeams: Team[], relegatedTeamIds: string[]) => void;
@@ -180,7 +169,6 @@ interface TournamentState {
 export const useStore = create<TournamentState>()(
   persist(
     (set, get) => ({
-      user: null,
       role: null,
       step: 'entry',
       
@@ -197,130 +185,61 @@ export const useStore = create<TournamentState>()(
       newsItems: [],
       scoutingReports: [],
 
-      setUser: (user) => set({ user }),
       setRole: (role) => set({ role }),
       setStep: (step) => set({ step }),
       
-      syncLeagues: async () => {
-        try {
-          const leagues = await supabaseService.fetchUserLeagues();
-          const cloudProfiles: Profile[] = leagues.map(l => ({
-            id: l.id,
-            name: l.name,
-            season: l.season || 1,
-            mode: l.mode,
-            teamCount: l.team_count || 8,
-            teams: [], 
-            fixtures: [],
-            players: [],
-            createdAt: l.created_at,
-            updatedAt: l.updated_at,
-            isCloud: true
-          }));
+      createProfile: (name, mode, teamCount) => set((state) => {
+        const newProfile: Profile = {
+          id: Math.random().toString(36).substr(2, 9),
+          name,
+          season: 1,
+          mode,
+          teamCount,
+          teams: [],
+          fixtures: [],
+          players: [],
+          newsItems: [],
+          scoutingReports: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        return {
+          profiles: [...state.profiles, newProfile],
+          currentProfileId: newProfile.id,
+          tournamentName: name,
+          mode,
+          teamCount,
+          season: 1,
+          teams: [],
+          fixtures: [],
+          players: [],
+          newsItems: [],
+          scoutingReports: [],
+          step: 'editor'
+        };
+      }),
 
-          // Merge with local profiles (those not marked as Cloud and not already matched by name/config)
-          const localProfiles = get().profiles.filter(p => 
-            !p.isCloud && !cloudProfiles.some(cp => cp.name === p.name && cp.mode === p.mode)
-          );
-
-          set({ profiles: [...cloudProfiles, ...localProfiles] });
-        } catch (error) {
-          console.error('Failed to sync leagues:', error);
-        }
-      },
-
-      migrateProfile: async (id: string) => {
-        const user = get().user;
-        if (!user) {
-          toast.error('Please login to migrate data');
-          return;
-        }
-
-        const profile = get().profiles.find(p => p.id === id);
-        if (!profile || (profile as any).isCloud) return;
-
-        try {
-          toast.loading('Migrating local data to cloud...', { id: 'migration' });
-          await supabaseService.migrateFullProfile(profile, user.id);
-          await get().syncLeagues();
-          toast.success('Migration successful!', { id: 'migration' });
-        } catch (error: any) {
-          console.error('Migration failed:', error);
-          toast.error(`Migration failed: ${error.message || 'Unknown error'}`, { id: 'migration' });
-        }
-      },
-
-      syncActiveLeague: async (id: string) => {
-        try {
-          const data = await supabaseService.fetchLeagueData(id);
-          set({
-            teams: data.teams,
-            fixtures: data.fixtures,
-            players: data.players,
-            newsItems: data.newsItems,
-            scoutingReports: data.scoutingReports
-          });
-        } catch (error) {
-          console.error('Failed to sync league data:', error);
-        }
-      },
-
-      createProfile: async (name, mode, teamCount, password) => {
-        const user = get().user;
-        if (!user) return;
-
-        try {
-          const league = await supabaseService.createLeague(name, mode, teamCount, user.id, password);
-          const newProfile: Profile = {
-            id: league.id,
-            name: league.name,
-            season: 1,
-            mode: league.mode,
-            teamCount: league.team_count,
-            teams: [],
-            fixtures: [],
-            players: [],
-            newsItems: [],
-            scoutingReports: [],
-            createdAt: league.created_at,
-            updatedAt: league.updated_at,
-          };
-
-          set((state) => ({
-            profiles: [...state.profiles, newProfile],
-            currentProfileId: league.id,
-            tournamentName: name,
-            mode,
-            teamCount,
-            season: 1,
-            teams: [],
-            fixtures: [],
-            players: [],
-            newsItems: [],
-            scoutingReports: [],
-            step: 'editor'
-          }));
-        } catch (error) {
-          console.error('Failed to create league:', error);
-        }
-      },
-
-      loadProfile: async (id) => {
-        await get().syncActiveLeague(id);
-        const profile = get().profiles.find(p => p.id === id);
-        if (!profile) return;
+      loadProfile: (id) => set((state) => {
+        const profile = state.profiles.find(p => p.id === id);
+        if (!profile) return state;
         
-        const nextStep = get().teams.length === 0 ? 'editor' : 'dashboard';
+        // If the profile has no teams, it's a new career that hasn't finished setup
+        const nextStep = profile.teams.length === 0 ? 'editor' : 'dashboard';
         
-        set({
+        return {
           currentProfileId: id,
           tournamentName: profile.name,
           mode: profile.mode,
           teamCount: profile.teamCount,
           season: profile.season,
+          teams: profile.teams,
+          fixtures: profile.fixtures,
+          players: profile.players,
+          newsItems: profile.newsItems || [],
+          scoutingReports: profile.scoutingReports || [],
           step: nextStep
-        });
-      },
+        };
+      }),
 
       deleteProfile: (id) => set((state) => ({
         profiles: state.profiles.filter(p => p.id !== id),

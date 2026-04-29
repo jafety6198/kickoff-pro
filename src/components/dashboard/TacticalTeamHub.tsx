@@ -152,7 +152,7 @@ export function TacticalTeamHub() {
   const lastResults = useMemo(() => {
     if (!selectedTeamId) return [];
     return fixtures
-      .filter(f => (f.homeTeamId === selectedTeamId || f.awayTeamId === selectedTeamId) && (f.leg1.status === 'finished' || f.leg2.status === 'finished'))
+      .filter(f => (f.homeTeamId === selectedTeamId || f.awayTeamId === selectedTeamId) && (f.leg1?.status === 'finished' || f.leg2?.status === 'finished'))
       .sort((a, b) => b.round - a.round)
       .slice(0, 5)
       .map(f => {
@@ -194,7 +194,7 @@ export function TacticalTeamHub() {
   const nextFixtures = useMemo(() => {
     if (!selectedTeamId) return [];
     return fixtures
-      .filter(f => (f.homeTeamId === selectedTeamId || f.awayTeamId === selectedTeamId) && f.leg1.status === 'pending')
+      .filter(f => (f.homeTeamId === selectedTeamId || f.awayTeamId === selectedTeamId) && f.leg1?.status === 'pending')
       .sort((a, b) => a.round - b.round)
       .slice(0, 3);
   }, [selectedTeamId, fixtures]);

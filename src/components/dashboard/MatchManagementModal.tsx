@@ -28,7 +28,7 @@ export function MatchManagementModal({ fixture, isOpen, onClose }: MatchManageme
   const [l2Home, setL2Home] = useState<string>(fixture.leg2.homeScore?.toString() || '');
   const [l2Away, setL2Away] = useState<string>(fixture.leg2.awayScore?.toString() || '');
   
-  const [activeLeg, setActiveLeg] = useState<1 | 2>(fixture.leg1.status === 'pending' ? 1 : 2);
+  const [activeLeg, setActiveLeg] = useState<1 | 2>(fixture.leg1?.status === 'pending' ? 1 : 2);
   
   const currentLegData = activeLeg === 1 ? fixture.leg1 : fixture.leg2;
 
